@@ -83,6 +83,15 @@ public class SessionController : ControllerBase
     [HttpPost]
     public IActionResult Create(SessionDto sessionDto)
     {
+        if (!_sessionManager.CheckValid(sessionDto))
+        {
+            return BadRequest(new ErrorResponse
+            {
+                Error = "Неверные данные",
+                Message = "Проверьте правильность введенных данных"
+            });
+        }
+        
         sessionDto.EndDate = sessionDto.EndDate.ToUniversalTime();
         sessionDto.StartDate = sessionDto.StartDate.ToUniversalTime();
         Session fullSession = _mapper.Map<Session>(sessionDto);
@@ -110,11 +119,24 @@ public class SessionController : ControllerBase
         List<string> questionsId = new();
         
         IEnumerable<Question> fullQuestions = _mapper.Map<IEnumerable<Question>>(session.Questions);
-        if (session.Questions != null)
-            questionsId = _questionsCaching.AddQuestions(fullQuestions.ToList(), sessionId);
+        try
+        {
+            if (session.Questions != null)
+                questionsId = _questionsCaching.AddQuestions(fullQuestions.ToList(), sessionId);
+        }
+        catch (ArgumentException e)
+        {
+            return BadRequest(new ErrorResponse
+            {
+                Error = "Сессия не найдена",
+                Message = e.Message
+            });
+        }
 
+        // BUG: При добавлении первых вопросов, мапинг работает не правильно, и мапит всё к строке
         Session sessionToUpdate = _mapper.Map<Session>(session);
         sessionToUpdate.ShortId = sessionId;
+        
         foreach (string question in questionsId) 
             sessionToUpdate.Questions.Add(question);
 
@@ -137,9 +159,19 @@ public class SessionController : ControllerBase
     {
         
         // TODO: Сделать что бы возвращалась сессия только если пользователь является её владельцем
-        Session session = _sessionManager.GetSession(shortId);
-        
-        return Ok(session);
+        try
+        {
+            Session session = _sessionManager.GetSession(shortId);
+            return Ok(session);
+        }
+        catch (ArgumentException e)
+        {
+            return BadRequest(new ErrorResponse
+            {
+                Error = e.Message,
+                Message = "Сессия не найдена"
+            });
+        }
     }
 
 #if DEBUG
@@ -154,6 +186,14 @@ public class SessionController : ControllerBase
         return Ok(_sessionManager.GetAllSessions());
     }
 #endif
+
+    /*
+    [Route("get/questions/{sessionId}")]
+    public IActionResult GetQuestions(string sessionId, List<string> questions)
+    {
+        
+    }
+    */
     
     /// <summary>
     /// Удаление сессии

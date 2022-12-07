@@ -1,5 +1,6 @@
 ﻿using Palm.Cash;
 using Palm.Models.Sessions;
+using Palm.Models.Sessions.Dto;
 using Palm.Models.Users;
 
 namespace Palm;
@@ -65,5 +66,13 @@ public class SessionManager
     public Session GetSession(string id)
     {
         return _cache.GetSession(id);
+    }
+
+    public bool CheckValid(SessionDto session)
+    {
+        return !(string.IsNullOrEmpty(session.Title) || 
+                 session.EndDate == DateTime.MinValue ||
+                 session.StartDate == DateTime.MinValue ||
+                 session.EndDate > session.StartDate);
     }
 }

@@ -21,14 +21,11 @@ public class SessionHub : Hub
         
     }
 
-    public async Task StartSession(string sessionId)
-    {
-        
-    }
-    
+    public async Task StartSession(string sessionId) =>
+        await Clients.Group(sessionId).SendAsync("StartSession");
+
     public override async Task OnConnectedAsync()
     {
-
         User user = await _userManager.FindByNameAsync(Context.User.Identity.Name);
 
         if (await _userManager.IsInRoleAsync(user, "teacher"))

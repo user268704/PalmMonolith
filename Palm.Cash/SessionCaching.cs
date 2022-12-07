@@ -29,7 +29,7 @@ public class SessionCaching : ISessionСaching
     {
         var value = _database.StringGet(id);
         if (value.IsNullOrEmpty)
-            throw new ("Session not found");
+            throw new ArgumentException("Session not found", nameof(id));
 
         return JsonSerializer.Deserialize<Session>(value);
     }
@@ -49,6 +49,7 @@ public class SessionCaching : ISessionСaching
     public void Remove(string id)
     {
         _database.KeyDelete(id);
+        _database.KeyDelete(id + "-questions");
     }
 
     public void Update(Session oldSession, Session newSession)
@@ -73,8 +74,10 @@ public class SessionCaching : ISessionСaching
     public List<Session> GetAllSessions()
     {
         IServer server = _redis.GetServer();
-        
-        var keys = server.Keys();
+
+        var keys = server
+            .Keys()
+            .Where(item => item.ToString().Length == 6);
         
         List<Session> sessions = new();
         foreach (RedisKey key in keys)

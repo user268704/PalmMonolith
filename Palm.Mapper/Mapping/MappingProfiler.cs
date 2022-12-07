@@ -9,25 +9,25 @@ public class MappingProfiler : Profile
 {
     public MappingProfiler()
     {
-        CreateMap<Session, SessionDto>();
-        CreateMap<SessionDto, Session>();
+        CreateMap<Session, SessionDto>()
+            .ReverseMap();
 
-        CreateMap<Session, SessionUpdateDto>();
-        CreateMap<SessionUpdateDto, Session>();
+        CreateMap<Session, SessionUpdateDto>()
+            .ReverseMap();
         
-        CreateMap<User, UserRegister>();
-        CreateMap<UserRegister, User>();
+        CreateMap<User, UserRegister>()
+            .ReverseMap();
 
-        CreateMap<Question, QuestionUpdateDto>();
-        CreateMap<QuestionUpdateDto, Question>();
+        CreateMap<Question, QuestionUpdateDto>()
+            .ReverseMap();
 
-        CreateMap<Answer, AnswerUpdateDto>();
-        CreateMap<AnswerUpdateDto, Answer>();
+        CreateMap<Answer, AnswerUpdateDto>()
+            .ReverseMap();
         
-        CreateMap<ICollection<Question>, ICollection<QuestionUpdateDto>>();
-        CreateMap<ICollection<QuestionUpdateDto>, ICollection<Question>>();
+        CreateMap<ICollection<Question>, ICollection<QuestionUpdateDto>>()
+            .ReverseMap();
         
-        CreateMap<ICollection<Answer>, ICollection<AnswerUpdateDto>>();
-        CreateMap<ICollection<AnswerUpdateDto>, ICollection<Answer>>();
+        CreateMap<ICollection<Answer>, ICollection<AnswerUpdateDto>>()
+            .ReverseMap();
     }
 }

@@ -50,7 +50,10 @@ public class QuestionsCaching : IQuestionsCaching
 
     public List<string> AddQuestions(List<Question> questions, string sessionId)
     {
-        string questionsJson =  _database.StringGet(sessionId + QUESTION_POSTFIX); 
+        string? questionsJson =  _database.StringGet(sessionId + QUESTION_POSTFIX);
+        if (questionsJson == null)
+            throw new ArgumentException("Session does not exist", nameof(sessionId));
+
         List<Question> questionsList = JsonSerializer.Deserialize<List<Question>>(questionsJson) 
                                        ?? new();
 
@@ -71,8 +74,8 @@ public class QuestionsCaching : IQuestionsCaching
         questionsList.AddRange(questions);
         questionsJson = JsonSerializer.Serialize(questionsList);
         _database.StringSet(sessionId + QUESTION_POSTFIX, questionsJson);
-
-        return questionsList.Select(x => x.Id.ToString()).ToList();
+        
+        return questionsList.Select(x => x.Id).ToList();
     }
 
     public void CreateQuestion(string sessionId) => 

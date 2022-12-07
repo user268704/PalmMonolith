@@ -74,6 +74,7 @@ app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseRouting();
 app.UseHttpsRedirection();
 
 app.UseEndpoints(enpoints =>
