@@ -15,8 +15,15 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddAutoMapper(typeof(Palm.Mapper.Mapping.MappingProfiler).Assembly);
-builder.Services.AddScoped<ISessionСaching, RedisCache>();
+
+builder.Services.AddScoped<ISessionСaching, SessionCaching>();
+builder.Services.AddScoped<IQuestionsCaching, QuestionsCaching>();
 builder.Services.AddScoped<SessionManager>();
+
+builder.Services.AddSignalR();
+builder.Services.AddSession();
+builder.Services.AddDistributedMemoryCache();
+
 builder.Services.AddIdentity<User, IdentityRole>(options =>
     {
         // TODO: Добавить уникальность никнейма пользователя
@@ -62,10 +69,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseSession();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseHttpsRedirection();
+
+app.UseEndpoints(enpoints =>
+{
+    enpoints.MapHub<SessionHub>("/api/signalr/session");
+});
 
 app.UseStaticFiles();
 app.MapControllers();

@@ -60,12 +60,9 @@ public class HomeController : Controller
         var createResult = await _userManager.CreateAsync(fullUser, user.Password);
         if (createResult.Succeeded)
         {
-            User? userSignIn = _userManager.FindByEmailAsync(fullUser.Email).Result;
+            await _signInManager.SignInAsync(fullUser, true);
             
-            // TODO: Проверить на null
-            await _signInManager.SignInAsync(userSignIn, true);
-            
-            return Ok();
+            return RedirectToPage("/profile");
         }
         
         return BadRequest(new ErrorResponse

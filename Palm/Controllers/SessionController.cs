@@ -2,10 +2,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Palm.Cash;
 using Palm.Models.Errors;
 using Palm.Models.Sessions;
 using Palm.Models.Sessions.Dto;
 using Palm.Models.Users;
+// ReSharper disable CommentTypo
+// ReSharper disable StringLiteralTypo
 
 namespace Palm.Controllers;
 
@@ -14,12 +17,14 @@ namespace Palm.Controllers;
 public class SessionController : ControllerBase
 {
     private readonly SessionManager _sessionManager;
+    private readonly QuestionsCaching _questionsCaching;
     private readonly UserManager<User> _userManager;
     private readonly IMapper _mapper;
 
-    public SessionController(SessionManager sessionManager, UserManager<User> userManager, IMapper mapper)
+    public SessionController(SessionManager sessionManager, /*QuestionsCaching questionsCaching,*/ UserManager<User> userManager, IMapper mapper)
     {
         _sessionManager = sessionManager;
+        _questionsCaching = new QuestionsCaching();
         _userManager = userManager;
         _mapper = mapper;
     }
@@ -52,9 +57,10 @@ public class SessionController : ControllerBase
 
         try
         {
-            _sessionManager.AddStudentToSession(session, user); 
+            _sessionManager.AddStudentToSession(session, user);
+            HttpContext.Session.SetString("sessionId", sessionId);
             
-            return Ok();
+            return RedirectToRoute("api/signalr/session");
         }
         catch (ArgumentException e)
         {
@@ -62,7 +68,7 @@ public class SessionController : ControllerBase
             {
                 Error = "Пользователь уже подключен к сессии",
                 Message = e.Message
-            }) ;
+            });
         }
     }
 
@@ -71,7 +77,8 @@ public class SessionController : ControllerBase
     /// </summary>
     /// <param name="sessionDto"></param>
     /// <returns></returns>
-    [Authorize(Roles = "teacher")]
+    /// TODO: Добавить проверку на то что пользователь является преподавателем
+    /*[Authorize("teacher")]*/
     [Route("create")]
     [HttpPost]
     public IActionResult Create(SessionDto sessionDto)
@@ -80,16 +87,38 @@ public class SessionController : ControllerBase
         sessionDto.StartDate = sessionDto.StartDate.ToUniversalTime();
         Session fullSession = _mapper.Map<Session>(sessionDto);
         
+        User user = _userManager.FindByNameAsync(HttpContext.User.Identity.Name).Result;
+        fullSession.HostId = Guid.Parse(user.Id);
+        
         _sessionManager.AddSession(fullSession);
 
         return Ok();
     }
 
+    /// <summary>
+    /// Здесь можно обновить сессию, добавить вопросы, изменить название или дату окончания 
+    /// </summary>
+    /// <param name="session">
+    /// Все обновления. Вопросы которые будут тут получены,
+    /// перезапишут все существующие, поэтому надо передавать всё старое вместе с новым
+    /// </param>
+    /// <param name="sessionId">Id сессии которую надо изменить</param>
     [Route("update/{sessionId}")]
     [HttpPut]
-    public IActionResult UpdateSession(Session session, string sessionId)
+    public IActionResult UpdateSession(SessionUpdateDto session, string sessionId)
     {
+        List<string> questionsId = new();
         
+        IEnumerable<Question> fullQuestions = _mapper.Map<IEnumerable<Question>>(session.Questions);
+        if (session.Questions != null)
+            questionsId = _questionsCaching.AddQuestions(fullQuestions.ToList(), sessionId);
+
+        Session sessionToUpdate = _mapper.Map<Session>(session);
+        sessionToUpdate.ShortId = sessionId;
+        foreach (string question in questionsId) 
+            sessionToUpdate.Questions.Add(question);
+
+        _sessionManager.UpdateSession(sessionToUpdate);
         
         return Ok();
     }

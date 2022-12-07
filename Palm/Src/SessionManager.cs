@@ -7,12 +7,14 @@ namespace Palm;
 public class SessionManager
 {
     private readonly ISessionСaching _cache;
+    private readonly IQuestionsCaching _questionsCache;
 
-    public SessionManager(ISessionСaching cache)
+    public SessionManager(ISessionСaching cache, IQuestionsCaching questionsCache)
     {
         _cache = cache;
+        _questionsCache = questionsCache;
     }
-    
+
     public void AddSession(Session session)
     {
         session.Id = Guid.NewGuid();
@@ -20,26 +22,34 @@ public class SessionManager
             .ToString()[..6];
         session.Students = new();
         session.Questions = new();
-        
+
+        _questionsCache.CreateQuestion(session.ShortId);
         _cache.AddSession(session);
     }
-    
+
     public void AddStudentToSession(Session session, User user)
     {
         // TODO: Проверка если студент уже есть в сессии
         if (_cache.IsExistStudentInSession(session.ShortId, user.Id))
             throw new ArgumentException("Студент уже есть в сессии", nameof(user));
-        
-        _cache.Remove(session.ShortId);
-        
+
         session.Students.Add(user.Id);
         
         _cache.AddSession(session);
     }
 
-    public void UpdateSession(Session session)
+    public void UpdateSession(Session sessionToUpdate)
     {
+        Session oldSession = GetSession(sessionToUpdate.ShortId);
         
+        oldSession.Questions = sessionToUpdate.Questions;
+        
+        // TODO: Добавить проверку существования студентов
+        oldSession.Students = sessionToUpdate.Students;
+        if (!string.IsNullOrEmpty(sessionToUpdate.Title)) 
+            oldSession.Title = sessionToUpdate.Title;
+
+        _cache.AddSession(oldSession);
     }
 
     public List<Session> GetAllSessions()
@@ -55,10 +65,5 @@ public class SessionManager
     public Session GetSession(string id)
     {
         return _cache.GetSession(id);
-    }
-
-    private Session AddQuestionsToSession(Session session, List<Question> questions)
-    {
-        session.Questions.AddRange(questions);
     }
 }

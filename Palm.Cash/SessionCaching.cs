@@ -5,11 +5,16 @@ using StackExchange.Redis;
 
 namespace Palm.Cash;
 
-public class RedisCache : ISessionСaching
+public class SessionCaching : ISessionСaching
 {
-    static readonly ConnectionMultiplexer _redis = ConnectionMultiplexer.Connect($"localhost:49153,password=redispw");
-    private IServer _server = _redis.GetServer("localhost:49153");
-    static readonly IDatabase _db = _redis.GetDatabase();
+    private readonly RedisConnect _redis;
+    private readonly IDatabase _database;
+
+    public SessionCaching()
+    {
+        _redis = RedisConnect.GetInstance();
+        _database = _redis.GetDatabase();
+    }
     
     public void AddSession(Session session)
     {
@@ -17,12 +22,12 @@ public class RedisCache : ISessionСaching
         if (string.IsNullOrEmpty(value))
             throw new ArgumentException("Session is not valid", nameof(session));
 
-        _db.StringGetSet(session.ShortId, value);
+        _database.StringGetSet(session.ShortId, value);
     }
 
     public Session GetSession(string id)
     {
-        var value = _db.StringGet(id);
+        var value = _database.StringGet(id);
         if (value.IsNullOrEmpty)
             throw new ("Session not found");
 
@@ -31,7 +36,7 @@ public class RedisCache : ISessionСaching
 
     public bool IsExistStudentInSession(string sessionShortId, string userId)
     {
-        string? sessionJson = _db.StringGet(sessionShortId);
+        string? sessionJson = _database.StringGet(sessionShortId);
 
         if (string.IsNullOrEmpty(sessionJson))
             throw new ArgumentException("Session not found", nameof(sessionShortId));
@@ -43,39 +48,38 @@ public class RedisCache : ISessionСaching
 
     public void Remove(string id)
     {
-        _db.KeyDelete(id);
+        _database.KeyDelete(id);
     }
 
     public void Update(Session oldSession, Session newSession)
     {
-        _db.KeyDelete(oldSession.Id.ToString()[..6]);
-
         string value = JsonSerializer.Serialize(newSession);
         
-        _db.StringSet(newSession.ShortId, value);
+        _database.StringSet(newSession.ShortId, value);
     }
 
     public void Update(Session sessionUpdate)
     {
-        string? sessionJson = _db.StringGet(sessionUpdate.ShortId);
+        string? sessionJson = _database.StringGet(sessionUpdate.ShortId);
         if (string.IsNullOrEmpty(sessionJson))
             throw new ArgumentException("Session is not valid", nameof(sessionUpdate));
 
         Session session = JsonSerializer.Deserialize<Session>(sessionJson);
-        _db.KeyDelete(sessionUpdate.ShortId);
         sessionJson = JsonSerializer.Serialize(session);
 
-        _db.StringSet(session.ShortId, sessionJson);
+        _database.StringSet(session.ShortId, sessionJson);
     }
 
     public List<Session> GetAllSessions()
     {
-        var keys = _server.Keys();
+        IServer server = _redis.GetServer();
+        
+        var keys = server.Keys();
         
         List<Session> sessions = new();
         foreach (RedisKey key in keys)
         {
-            var value = _db.StringGet(key);
+            var value = _database.StringGet(key);
             if (value.IsNullOrEmpty)
                 continue;
 
@@ -87,6 +91,8 @@ public class RedisCache : ISessionСaching
 
     public void Clear()
     {
-        _server.FlushDatabase();
+        IServer server = _redis.GetServer();
+
+        server.FlushDatabase();
     }
 }
