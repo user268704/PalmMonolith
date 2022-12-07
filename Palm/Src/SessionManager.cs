@@ -6,9 +6,9 @@ namespace Palm;
 
 public class SessionManager
 {
-    private readonly IСaching _cache;
+    private readonly ISessionСaching _cache;
 
-    public SessionManager(IСaching cache)
+    public SessionManager(ISessionСaching cache)
     {
         _cache = cache;
     }
@@ -24,12 +24,22 @@ public class SessionManager
         _cache.AddSession(session);
     }
     
-    public void AddStudentToSession(Session session, Student student)
+    public void AddStudentToSession(Session session, User user)
     {
         // TODO: Проверка если студент уже есть в сессии
+        if (_cache.IsExistStudentInSession(session.ShortId, user.Id))
+            throw new ArgumentException("Студент уже есть в сессии", nameof(user));
+        
         _cache.Remove(session.ShortId);
-        session.Students.Add(student);
+        
+        session.Students.Add(user.Id);
+        
         _cache.AddSession(session);
+    }
+
+    public void UpdateSession(Session session)
+    {
+        
     }
 
     public List<Session> GetAllSessions()
@@ -45,5 +55,10 @@ public class SessionManager
     public Session GetSession(string id)
     {
         return _cache.GetSession(id);
+    }
+
+    private Session AddQuestionsToSession(Session session, List<Question> questions)
+    {
+        session.Questions.AddRange(questions);
     }
 }

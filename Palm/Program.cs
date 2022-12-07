@@ -1,9 +1,11 @@
 using System.Reflection;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Palm;
 using Palm.Cash;
 using Palm.Infrastructure;
+using Palm.Models.Users;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,8 +15,16 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddAutoMapper(typeof(Palm.Mapper.Mapping.MappingProfiler).Assembly);
-builder.Services.AddScoped<IСaching, RedisCache>();
+builder.Services.AddScoped<ISessionСaching, RedisCache>();
 builder.Services.AddScoped<SessionManager>();
+builder.Services.AddIdentity<User, IdentityRole>(options =>
+    {
+        // TODO: Добавить уникальность никнейма пользователя
+        // options.User.RequireUniqueEmail = true;
+    })
+    .AddEntityFrameworkStores<UserDataContext>()
+    .AddRoles<IdentityRole>();
+
 builder.Services.AddSwaggerGen(options =>
 {
     string xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
@@ -23,9 +33,20 @@ builder.Services.AddSwaggerGen(options =>
     options.IncludeXmlComments(xmlPath);
 });
 
-builder.Services.AddAuthorization();
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("teacher", 
+        policy => policy.RequireRole("teacher"));
+    options.AddPolicy("student", 
+        policy => policy.RequireRole("student"));
+});
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+        options.LogoutPath = "/logout";
+        options.AccessDeniedPath = "/denied";
+    });
 
 builder.Services.AddDbContext<UserDataContext>(options =>
 {

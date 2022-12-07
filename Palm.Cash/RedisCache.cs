@@ -5,7 +5,7 @@ using StackExchange.Redis;
 
 namespace Palm.Cash;
 
-public class RedisCache : IСaching
+public class RedisCache : ISessionСaching
 {
     static readonly ConnectionMultiplexer _redis = ConnectionMultiplexer.Connect($"localhost:49153,password=redispw");
     private IServer _server = _redis.GetServer("localhost:49153");
@@ -28,7 +28,19 @@ public class RedisCache : IСaching
 
         return JsonSerializer.Deserialize<Session>(value);
     }
-    
+
+    public bool IsExistStudentInSession(string sessionShortId, string userId)
+    {
+        string? sessionJson = _db.StringGet(sessionShortId);
+
+        if (string.IsNullOrEmpty(sessionJson))
+            throw new ArgumentException("Session not found", nameof(sessionShortId));
+        
+        Session session = JsonSerializer.Deserialize<Session>(sessionJson);
+        
+        return session.Students.Any(x => x.ToString() == userId);
+    }
+
     public void Remove(string id)
     {
         _db.KeyDelete(id);

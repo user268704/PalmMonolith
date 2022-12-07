@@ -11,5 +11,8 @@ public class MappingProfiler : Profile
     {
         CreateMap<Session, SessionDto>();
         CreateMap<SessionDto, Session>();
+
+        CreateMap<User, UserRegister>();
+        CreateMap<UserRegister, User>();
     }
 }
