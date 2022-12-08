@@ -11,7 +11,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+// builder.Services.AddControllers();
+// builder.Services.AddControllersWithViews();
+builder.Services.AddMvc();
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddAutoMapper(typeof(Palm.Mapper.Mapping.MappingProfiler).Assembly);
@@ -71,11 +74,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseSession();
 
-app.UseAuthentication();
-app.UseAuthorization();
-
 app.UseRouting();
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseEndpoints(enpoints =>
 {

@@ -19,10 +19,26 @@ public class HomeController : Controller
         _userManager = userManager;
         _mapper = mapper;
     }
+
+    [Route("/")]
+    [HttpGet]
+    public IActionResult Index()
+    {
+        return View();
+    }
+
+    [Route("login")]
+    [HttpGet]
+    public IActionResult LoginView(string? fromSession)
+    {
+        ViewData["fromSession"] = fromSession;
+        
+        return View("Login");
+    }
     
     [Route("login")]
     [HttpPost]
-    public async Task<IActionResult> Login(UserRegister user)
+    public async Task<IActionResult> Login(UserRegister user, string? fromSession)
     {
         User fullUser = _mapper.Map<User>(user);
         User? userFromDb = await _userManager.FindByNameAsync(fullUser.UserName);
@@ -30,7 +46,14 @@ public class HomeController : Controller
         if (userFromDb != null && await _userManager.CheckPasswordAsync(userFromDb, user.Password))
         {
             await _signInManager.SignInAsync(userFromDb, false);
-            return Ok();
+            if (string.IsNullOrEmpty(fromSession))
+                return Ok();
+
+            return RedirectToAction("Join", "Session", new 
+            {
+                sessionId = fromSession,
+                isAuthUser = true
+            });
         }
 
         return BadRequest(new ErrorResponse
@@ -40,19 +63,18 @@ public class HomeController : Controller
         });
     }
 
-    [Authorize]
-    [Route("logout")]
-    [HttpPost]
-    public IActionResult Logout()
+    [Route("register")]
+    [HttpGet]
+    public IActionResult RegisterView(string? fromSession)
     {
-        _signInManager.SignOutAsync();
-        
-        return Ok();
+        ViewData["fromSession"] = fromSession;
+
+        return View("Register");
     }
 
     [Route("register")]
     [HttpPost]
-    public async Task<IActionResult> Register(UserRegister user)
+    public async Task<IActionResult> Register(UserRegister user, string? fromSession)
     {
         User fullUser = _mapper.Map<User>(user);
 
@@ -61,8 +83,15 @@ public class HomeController : Controller
         if (createResult.Succeeded)
         {
             await _signInManager.SignInAsync(fullUser, true);
-            
-            return RedirectToPage("/profile");
+            if (string.IsNullOrEmpty(fromSession))
+                return RedirectToPage("/profile");
+
+
+            return RedirectToAction("Join" ,"Session", new
+            {
+                sessionId = fromSession,
+                isAuthUser = true
+            });
         }
         
         return BadRequest(new ErrorResponse

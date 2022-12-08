@@ -1,0 +1,27 @@
+﻿@page
+@model string
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Manage</title>
+</head>
+<body>
+<div>
+    <div class="row">
+        <ul id="messagesList">
+        </ul>
+        
+        <div class="col-6">
+            <p>Сессия: @ViewBag.sessionId</p>
+            <input type="hidden" id="sessionId" value="@ViewBag.sessionId">
+            
+            <input type="button" id="startSession" value="Запустить сессию"/>
+        </div>
+    </div>
+</div>
+<script src="~/js/signalr/dist/browser/signalr.js"></script>
+<script src="~/js/manage.js"></script>
+</body>
+</html>

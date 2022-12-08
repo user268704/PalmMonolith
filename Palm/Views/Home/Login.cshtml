@@ -1,0 +1,25 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+</head>
+<body>
+<div>
+    <h1>Логин</h1>
+    <form action="/login" method="post">
+        <input type="text" placeholder="Никнейм" name="UserName" id="userName">
+        <input type="text" placeholder="Имя" name="Name" id="name">
+        <input type="text" placeholder="Фамилия" name="LastName" id="lastName">
+        <input type="email" placeholder="Почта" name="Email" id="email">
+        <input type="password" placeholder="Пароль" name="Password" id="password">
+        <input type="hidden" name="fromSession" value="@ViewData["fromSession"]">
+        
+        <input type="submit" value="Залогиниться">
+    </form>
+</div>
+</body>
+</html>

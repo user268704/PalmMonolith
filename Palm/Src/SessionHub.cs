@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Palm.Models.Sessions;
 using Palm.Models.Users;
@@ -8,36 +10,51 @@ namespace Palm;
 public class SessionHub : Hub
 {
     private readonly SessionManager _sessionManager;
+    private readonly IMapper _mapper;
     private readonly UserManager<User> _userManager;
 
-    public SessionHub(SessionManager sessionManager, UserManager<User> userManager)
+    public SessionHub(SessionManager sessionManager, IMapper mapper, UserManager<User> userManager)
     {
         _sessionManager = sessionManager;
+        _mapper = mapper;
         _userManager = userManager;
     }
-    
-    public async Task ConfirmSession(List<Question> questions, string sessionId)
+
+    public void Reply(string sessionId, string questionId, string answerId)
     {
         
     }
 
-    public async Task StartSession(string sessionId) =>
-        await Clients.Group(sessionId).SendAsync("StartSession");
+    public void StartSession(string sessionId)
+    {
+        Session session = _sessionManager.GetSession(sessionId);
 
-    public override async Task OnConnectedAsync()
+        Clients.Group(session.GroupInfo.GroupName).SendAsync("StartSession");
+    }
+
+    public async Task JoinSession(string sessionId)
     {
         User user = await _userManager.FindByNameAsync(Context.User.Identity.Name);
-
-        if (await _userManager.IsInRoleAsync(user, "teacher"))
-        {
-            Context.GetHttpContext().Session.SetString("hostId", Context.ConnectionId);
-
-            return;
-        }
-
-        var session = Context.GetHttpContext().Session;
+        Session session = _sessionManager.GetSession(sessionId);
         
-        await Groups.AddToGroupAsync(Context.ConnectionId, session.GetString("sessionId"));
-        await Clients.Client(session.GetString("hostId")).SendAsync("UserJoined", user.Id, user.UserName);
+        await Groups.AddToGroupAsync(Context.ConnectionId, session.GroupInfo.GroupName);
+        UserRegister userRegister = _mapper.Map<UserRegister>(user);
+        
+        await Clients.Client(session.GroupInfo.TeacherId).SendAsync("UserJoined", userRegister);
+    }
+    
+    [Authorize("teacher")]
+    public async Task InitialSession(string sessionId)
+    {
+        // User user = await _userManager.FindByNameAsync(Context.User.Identity.Name);
+
+        Session session = _sessionManager.GetSession(sessionId);
+        session.GroupInfo = new()
+        {
+            GroupName = sessionId,
+            TeacherId = Context.ConnectionId
+        };
+        
+        _sessionManager.UpdateSession(session);
     }
 }

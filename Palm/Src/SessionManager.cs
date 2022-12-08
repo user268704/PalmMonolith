@@ -44,12 +44,14 @@ public class SessionManager
         Session oldSession = GetSession(sessionToUpdate.ShortId);
         
         oldSession.Questions = sessionToUpdate.Questions;
+        oldSession.GroupInfo = sessionToUpdate.GroupInfo;
         
         // TODO: Добавить проверку существования студентов
         oldSession.Students = sessionToUpdate.Students;
         if (!string.IsNullOrEmpty(sessionToUpdate.Title)) 
             oldSession.Title = sessionToUpdate.Title;
-
+        
+        
         _cache.AddSession(oldSession);
     }
 

@@ -16,6 +16,7 @@ public class MappingProfiler : Profile
             .ReverseMap();
         
         CreateMap<User, UserRegister>()
+            .ForMember(options => options.Password, options => options.Ignore())
             .ReverseMap();
 
         CreateMap<Question, QuestionUpdateDto>()

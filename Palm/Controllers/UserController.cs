@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Palm.Models.Errors;
 using Palm.Models.Users;
 
 namespace Palm.Controllers;
@@ -12,21 +13,18 @@ public class UserController : ControllerBase
 {
     private readonly UserManager<User> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly SignInManager<User> _signInManager;
     private readonly IMapper _mapper;
 
-    public UserController(UserManager<User> userManager, RoleManager<IdentityRole> roleManager, IMapper mapper)
+    public UserController(UserManager<User> userManager,
+        RoleManager<IdentityRole> roleManager,
+        SignInManager<User> signInManager,
+        IMapper mapper)
     {
         _userManager = userManager;
         _roleManager = roleManager;
+        _signInManager = signInManager;
         _mapper = mapper;
-    }
-    
-    
-    [Route("get/{userId}")]
-    [HttpGet]
-    public IActionResult GetUser(Guid userId)
-    {
-        return Ok("Чувак, ты авторизован");
     }
 
 #if DEBUG
@@ -48,20 +46,33 @@ public class UserController : ControllerBase
         return Ok("Ты теперь босс, бро");
     }
     
+    [Route("/get-me")]
+    [HttpGet]
+    public async Task<IActionResult> GetMe()
+    {
+        User user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
+
+        return Ok(user);
+    }
+    
 #endif
 
 
-    /*
-    public IActionResult UpdateUser()
+    [Authorize]
+    [Route("logout")]
+    [HttpPost]
+    public IActionResult Logout()
     {
+        _signInManager.SignOutAsync();
         
+        return Ok();
     }
-    */
-    
-    /*
-    public IActionResult DeleteUser()
+
+    [Authorize]
+    [Route("profile")]
+    [HttpGet]
+    public IActionResult Profile()
     {
-        
+        return Ok();
     }
-*/
 }

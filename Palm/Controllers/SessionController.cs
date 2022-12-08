@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Palm.Cash;
 using Palm.Models.Errors;
 using Palm.Models.Sessions;
@@ -32,16 +33,18 @@ public class SessionController : ControllerBase
     /// <summary>
     /// Подключение студента к сессии
     /// </summary>
-    /// <param name="userId">Id пользователя который будет подключаться</param>
     /// <param name="isAuthUser">Флаг который сообщает авторизован ли пользователь, если да то добавлять его по аккаунту, если нет то редирект на страницу регистрации</param>
     /// <param name="sessionId">Id сессии к которой будут подключаться</param>
-    [Authorize(Roles = "student")]
+    /*[Authorize("student")]*/
     [Route("join/{sessionId}")]
-    [HttpPost]
-    public async Task<IActionResult> Join(Guid? userId, bool isAuthUser, string sessionId)
+    [HttpGet]
+    public async Task<IActionResult> Join(bool isAuthUser, string sessionId)
     {
         if (!isAuthUser)
-            return RedirectToAction("Login", "Home");
+            return RedirectToAction("LoginView", "Home", new
+            {
+                fromSession = sessionId
+            });
 
         Session session = _sessionManager.GetSession(sessionId);
         var userName = HttpContext.User.Identity.Name;
@@ -60,14 +63,17 @@ public class SessionController : ControllerBase
             _sessionManager.AddStudentToSession(session, user);
             HttpContext.Session.SetString("sessionId", sessionId);
             
-            return RedirectToRoute("api/signalr/session");
+            return RedirectToAction("Index", "SessionViews", new
+            {
+                sessionId = sessionId
+            });
         }
         catch (ArgumentException e)
         {
-            return BadRequest(new ErrorResponse
+            //TODO: ПОЧИНИТЬ
+            return RedirectToAction("Index", "SessionViews", new
             {
-                Error = "Пользователь уже подключен к сессии",
-                Message = e.Message
+                sessionId = sessionId
             });
         }
     }
@@ -187,14 +193,6 @@ public class SessionController : ControllerBase
     }
 #endif
 
-    /*
-    [Route("get/questions/{sessionId}")]
-    public IActionResult GetQuestions(string sessionId, List<string> questions)
-    {
-        
-    }
-    */
-    
     /// <summary>
     /// Удаление сессии
     /// </summary>
