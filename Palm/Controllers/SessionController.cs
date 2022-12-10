@@ -2,12 +2,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Palm.Cash;
+using Palm.Data.Implementations;
 using Palm.Models.Errors;
 using Palm.Models.Sessions;
 using Palm.Models.Sessions.Dto;
 using Palm.Models.Users;
+
 // ReSharper disable CommentTypo
 // ReSharper disable StringLiteralTypo
 
@@ -17,10 +17,10 @@ namespace Palm.Controllers;
 [Route("api/session")]
 public class SessionController : ControllerBase
 {
-    private readonly SessionManager _sessionManager;
-    private readonly QuestionsCaching _questionsCaching;
-    private readonly UserManager<User> _userManager;
     private readonly IMapper _mapper;
+    private readonly QuestionsCaching _questionsCaching;
+    private readonly SessionManager _sessionManager;
+    private readonly UserManager<User> _userManager;
 
     public SessionController(SessionManager sessionManager, /*QuestionsCaching questionsCaching,*/ UserManager<User> userManager, IMapper mapper)
     {
@@ -46,7 +46,14 @@ public class SessionController : ControllerBase
                 fromSession = sessionId
             });
 
-        Session session = _sessionManager.GetSession(sessionId);
+        Session? session = _sessionManager.GetSession(sessionId);
+        if (session == null)
+            return BadRequest(new ErrorResponse()
+            {
+                Error = "Такой сессии не существует",
+                Message = "Сессия не найдена"
+            });
+        
         var userName = HttpContext.User.Identity.Name;
         
         User? user = await _userManager.FindByNameAsync(userName);
@@ -60,22 +67,17 @@ public class SessionController : ControllerBase
 
         try
         {
+            // ArgumentException если студент уже подключен к сессии
             _sessionManager.AddStudentToSession(session, user);
             HttpContext.Session.SetString("sessionId", sessionId);
-            
-            return RedirectToAction("Index", "SessionViews", new
-            {
-                sessionId = sessionId
-            });
         }
         catch (ArgumentException e)
+        { }
+        
+        return RedirectToAction("Index", "SessionViews", new
         {
-            //TODO: ПОЧИНИТЬ
-            return RedirectToAction("Index", "SessionViews", new
-            {
-                sessionId = sessionId
-            });
-        }
+            sessionId = sessionId
+        });
     }
 
     /// <summary>
@@ -83,8 +85,9 @@ public class SessionController : ControllerBase
     /// </summary>
     /// <param name="sessionDto"></param>
     /// <returns></returns>
-    /// TODO: Добавить проверку на то что пользователь является преподавателем
-    /*[Authorize("teacher")]*/
+    /// TODO: Какого-то хера тут я не прохожу проверку будучи учителем 🤦‍
+    /// а в другом эндпоинте с таким же атрибутом и в этом же аккаунте всё хорошо
+    [Authorize("teacher")]
     [Route("create")]
     [HttpPost]
     public IActionResult Create(SessionDto sessionDto)
@@ -110,13 +113,30 @@ public class SessionController : ControllerBase
         return Ok();
     }
 
+    [Authorize("teacher")]
+    [Route("get/all-my")]
+    [HttpGet]
+    public async Task<IActionResult> GetAllTeacherSessions()
+    {
+        User? user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
+        if (user == null)
+            return BadRequest(new ErrorResponse()
+            {
+                Error = "Пользователь не найден",
+                Message = "Запрашиваемый пользователь не зарегистрирован в системе"
+            });
+
+        var sessions = _sessionManager.GetAllSessions();
+        var allMySessionResult = sessions
+            .Where(prop => prop.HostId.ToString() == user.Id);
+        
+        return Ok(allMySessionResult);
+    }
+
     /// <summary>
     /// Здесь можно обновить сессию, добавить вопросы, изменить название или дату окончания 
     /// </summary>
-    /// <param name="session">
-    /// Все обновления. Вопросы которые будут тут получены,
-    /// перезапишут все существующие, поэтому надо передавать всё старое вместе с новым
-    /// </param>
+    /// <param name="session"></param>
     /// <param name="sessionId">Id сессии которую надо изменить</param>
     [Route("update/{sessionId}")]
     [HttpPut]
@@ -151,24 +171,33 @@ public class SessionController : ControllerBase
         return Ok();
     }
 
+    [Authorize("teacher")]
+    [Route("change/questions/{sessionId}")]
+    [HttpPut]
+    public IActionResult ChangeQuestions([FromQuery] List<string> questions, [FromBody] List<Question> changed, string sessionId)
+    {
+        return StatusCode(501);
+    }
+
     /// <summary>
     /// Возвращает сессию по её id
     /// </summary>
     /// <param name="shortId"></param>
     /// <returns></returns>
-    /*
-    [Authorize("sessionOwner")]
-    */
+    [Authorize("teacher")]
     [Route("get/{shortId}")]
     [HttpGet]
-    public IActionResult GetSession(string shortId)
+    public async Task<IActionResult> GetSession(string shortId)
     {
-        
-        // TODO: Сделать что бы возвращалась сессия только если пользователь является её владельцем
         try
         {
             Session session = _sessionManager.GetSession(shortId);
-            return Ok(session);
+            User user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
+            
+            if (session.HostId.ToString() == user.Id)
+                return Ok(session);
+
+            return Forbid();
         }
         catch (ArgumentException e)
         {
@@ -198,13 +227,20 @@ public class SessionController : ControllerBase
     /// </summary>
     /// <param name="shortId"></param>
     /// <returns></returns>
+    [Authorize("teacher")]
     [Route("remove/{shortId}")]
     [HttpPost]
-    public IActionResult RemoveSession(string shortId)
+    public async Task<IActionResult> RemoveSession(string shortId)
     {
-        // TODO: Сделать что бы удалялась сессия только если пользователь является её владельцем
-        _sessionManager.RemoveSession(shortId);
-        
-        return Ok();
+        User user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
+        Session session = _sessionManager.GetSession(shortId);
+
+        if (user.Id == session.HostId.ToString())
+        {
+            _sessionManager.RemoveSession(shortId);
+            return Ok();
+        }
+
+        return Forbid();
     }
 }

@@ -4,6 +4,17 @@ var connection = new signalR.HubConnectionBuilder().withUrl("/api/signalr/sessio
 
 //Disable the send button until connection is established.
 document.getElementById("startSession").disabled = true;
+document.getElementById("expelStudentButton")
+    .addEventListener("click", function (event) {
+        const studentId = document.getElementById("userId").value;
+        
+        connection.invoke("ExpelStudent", studentId)
+            .catch(function (err) {
+                return console.error(err.toString());
+            });
+        
+        event.preventDefault();
+    })
 
 // Создание метода который будет вызываться с сервера
 connection.on("StartSession", function () {
@@ -21,6 +32,28 @@ connection.on("UserJoined", function (user) {
     li.textContent = `${user.userName} joined the session`;
 })
 
+connection.on("UserLeft", function (user) {
+    const li = document.createElement("li");
+    document.getElementById("messagesList").appendChild(li);
+    
+    li.textContent = `${user.userName} left the session`;
+})
+
+connection.on("UserDisconnect", function (user) {
+    
+    const li = document.createElement("li");
+    document.getElementById("messagesList").appendChild(li);
+    
+    li.textContent = `${user.userName} disconnected`;
+})
+
+connection.on("Ping", function () {
+    connection.invoke("Pong")
+        .catch(function (err) {
+            return console.error(err.toString());
+        });
+})
+
 connection.start().then(function () {
     document.getElementById("startSession").disabled = false;
     // Get session from url query string
@@ -36,6 +69,18 @@ connection.start().then(function () {
 }).catch(function (err) {
     return console.error(err.toString());
 });
+
+document.getElementById("endSession").addEventListener("click", function (event) {
+    // Get session from url query string
+    const urlPath = window.location.pathname;
+    let sessionId = urlPath.substring(urlPath.indexOf("/"), urlPath.lastIndexOf('/'));
+    sessionId = sessionId.substring(sessionId.lastIndexOf('/') + 1);
+    
+    connection.invoke("EndSession", sessionId)
+        .catch(function (err) {
+            return console.error(err.toString());
+        });
+})
 
 document.getElementById("startSession").addEventListener("click", function (event) {
     const user = document.getElementById("sessionId").value;

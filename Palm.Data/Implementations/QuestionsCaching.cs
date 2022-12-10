@@ -1,28 +1,28 @@
 ﻿using System.Text.Json;
+using Palm.Abstractions.Interfaces.Data;
 using Palm.Models.Sessions;
 using StackExchange.Redis;
 
-namespace Palm.Cash;
+namespace Palm.Data.Implementations;
 
 public class QuestionsCaching : IQuestionsCaching
 {
-    private readonly RedisConnect _redis;
-    private readonly IDatabase _database;
-
     private const string QUESTION_POSTFIX = "-questions";
-    
+    private readonly IDatabase _database;
+    private readonly RedisConnect _redis;
+
     public QuestionsCaching()
     {
         _redis = RedisConnect.GetInstance();
         _database = _redis.GetDatabase();
     }
-    
+
     public Question GetQuestion(string sessionId, string questionId)
     {
         string questionsJson =  _database.StringGet(sessionId + QUESTION_POSTFIX); 
         List<Question> questions = JsonSerializer.Deserialize<List<Question>>(questionsJson);
 
-        return questions.Find(q => q.Id == questionId);
+        return questions.Find(q => q.Id.ToString() == questionId);
     }
 
     public List<Question> GetQuestionsFromSession(string sessionId)
@@ -59,8 +59,8 @@ public class QuestionsCaching : IQuestionsCaching
 
         foreach (Question question in questions)
         {
-            if (string.IsNullOrEmpty(question.Id)) 
-                question.Id = Guid.NewGuid().ToString();
+            if (question.Id == Guid.Empty) 
+                question.Id = Guid.NewGuid();
             
             List<Answer> answers = question.Answers.ToList();
             for (var i = 0; i < answers.Count; i++)
@@ -75,7 +75,7 @@ public class QuestionsCaching : IQuestionsCaching
         questionsJson = JsonSerializer.Serialize(questionsList);
         _database.StringSet(sessionId + QUESTION_POSTFIX, questionsJson);
         
-        return questionsList.Select(x => x.Id).ToList();
+        return questions.Select(x => x.Id.ToString()).ToList();
     }
 
     public void CreateQuestion(string sessionId) => 

@@ -3,12 +3,30 @@
 var connection = new signalR.HubConnectionBuilder().withUrl("/api/signalr/session").build();
 
 // Создание метода который будет вызываться с сервера
-connection.on("StartSession", function () {
+connection.on("StartSession", function (questions) {
     const li = document.createElement("li");
     document.getElementById("messagesList").appendChild(li);
     
     li.textContent = "Session started";
+    
+    setQuestions(questions);
 });
+
+connection.on("SessionEnded", function () {
+    alert("Session ended");
+    
+    window.location.href = "/";
+})
+
+connection.on("Error", function (error) {
+    alert(error.error);
+})
+
+connection.on("StopSession", function () {
+    alert("Сессия остановлена")
+    
+    connection.stop()
+})
 
 connection.start().then(function () {
     const list = document.getElementById("messagesList");

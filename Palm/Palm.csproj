@@ -19,8 +19,13 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Palm.Cash\Palm.Cash.csproj" />
+      <ProjectReference Include="..\Palm.Abstractions\Palm.Abstractions.csproj" />
+      <ProjectReference Include="..\Palm.Data\Palm.Data.csproj" />
       <ProjectReference Include="..\Palm.Infrastructure\Palm.Infrastructure.csproj" />
-        
+      <ProjectReference Include="..\Palm.Mapper\Palm.Mapper.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Migrations\SessionData" />
     </ItemGroup>
 </Project>

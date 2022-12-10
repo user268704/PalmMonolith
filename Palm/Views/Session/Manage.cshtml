@@ -18,6 +18,13 @@
             <input type="hidden" id="sessionId" value="@ViewBag.sessionId">
             
             <input type="button" id="startSession" value="Запустить сессию"/>
+            <input type="button" id="endSession" value="Завершить сессию"/>
+        </div>
+        <div class="manageUser" style="display: flex; flex-direction: row">
+            <form>
+                <input type="text" name="userId" id="userId" placeholder="ID ученика">
+                <input type="button" id="expelStudentButton" value="Выгнать ученика">
+            </form>
         </div>
     </div>
 </div>

@@ -1,6 +1,3 @@
-using System.Runtime.Serialization;
-using Palm.Models.Users;
-
 namespace Palm.Models.Sessions.Dto;
 
 public class SessionDto

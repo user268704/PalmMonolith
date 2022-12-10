@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
-
-namespace Palm.Models.Users;
+﻿namespace Palm.Models.Users;
 
 public class UserRegister
 {

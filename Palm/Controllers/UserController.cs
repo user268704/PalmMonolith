@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Palm.Models.Errors;
 using Palm.Models.Users;
 
 namespace Palm.Controllers;
@@ -11,10 +10,10 @@ namespace Palm.Controllers;
 [Route("api/users/")]
 public class UserController : ControllerBase
 {
-    private readonly UserManager<User> _userManager;
+    private readonly IMapper _mapper;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly SignInManager<User> _signInManager;
-    private readonly IMapper _mapper;
+    private readonly UserManager<User> _userManager;
 
     public UserController(UserManager<User> userManager,
         RoleManager<IdentityRole> roleManager,
@@ -25,6 +24,25 @@ public class UserController : ControllerBase
         _roleManager = roleManager;
         _signInManager = signInManager;
         _mapper = mapper;
+    }
+
+
+    [Authorize]
+    [Route("logout")]
+    [HttpPost]
+    public IActionResult Logout()
+    {
+        _signInManager.SignOutAsync();
+        
+        return Ok();
+    }
+
+    [Authorize]
+    [Route("profile")]
+    [HttpGet]
+    public IActionResult Profile()
+    {
+        return Ok();
     }
 
 #if DEBUG
@@ -45,7 +63,7 @@ public class UserController : ControllerBase
 
         return Ok("Ты теперь босс, бро");
     }
-    
+
     [Route("/get-me")]
     [HttpGet]
     public async Task<IActionResult> GetMe()
@@ -54,25 +72,6 @@ public class UserController : ControllerBase
 
         return Ok(user);
     }
-    
+
 #endif
-
-
-    [Authorize]
-    [Route("logout")]
-    [HttpPost]
-    public IActionResult Logout()
-    {
-        _signInManager.SignOutAsync();
-        
-        return Ok();
-    }
-
-    [Authorize]
-    [Route("profile")]
-    [HttpGet]
-    public IActionResult Profile()
-    {
-        return Ok();
-    }
 }

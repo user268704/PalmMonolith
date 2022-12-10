@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Palm;
-using Palm.Cash;
+using Palm.Abstractions.Interfaces.Data;
+using Palm.Data.Implementations;
 using Palm.Infrastructure;
 using Palm.Models.Users;
 
@@ -21,6 +22,7 @@ builder.Services.AddAutoMapper(typeof(Palm.Mapper.Mapping.MappingProfiler).Assem
 
 builder.Services.AddScoped<ISessionСaching, SessionCaching>();
 builder.Services.AddScoped<IQuestionsCaching, QuestionsCaching>();
+builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 builder.Services.AddScoped<SessionManager>();
 
 builder.Services.AddSignalR();
@@ -29,8 +31,7 @@ builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddIdentity<User, IdentityRole>(options =>
     {
-        // TODO: Добавить уникальность никнейма пользователя
-        // options.User.RequireUniqueEmail = true;
+        options.User.RequireUniqueEmail = true;
     })
     .AddEntityFrameworkStores<UserDataContext>()
     .AddRoles<IdentityRole>();
@@ -60,8 +61,15 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddDbContext<UserDataContext>(options =>
 {
-    options.UseNpgsql("Host=localhost;Port=5432;Database=Palm.Users;Username=postgres;Password=str33tf1ght3r", b => b.MigrationsAssembly("Palm"));
+    options.UseNpgsql("Host=localhost;Port=5432;Database=Palm.Users;Username=postgres;Password=str33tf1ght3r", 
+        b => b.MigrationsAssembly("Palm"));
 }, ServiceLifetime.Transient);
+
+builder.Services.AddDbContext<SessionDataContext>(options =>
+{
+    options.UseNpgsql("Host=localhost;Port=5432;Database=Palm.Users;Username=postgres;Password=str33tf1ght3r",
+        b => b.MigrationsAssembly("Palm"));
+});
 
 var app = builder.Build();
 
@@ -80,11 +88,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseEndpoints(enpoints =>
-{
-    enpoints.MapHub<SessionHub>("/api/signalr/session");
-});
-
+app.MapHub<SessionHub>("api/signalr/session");
 app.UseStaticFiles();
 app.MapControllers();
 

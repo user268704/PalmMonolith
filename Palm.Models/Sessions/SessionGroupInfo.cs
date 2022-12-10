@@ -3,6 +3,7 @@
 public class SessionGroupInfo
 {
     public int Id { get; set; }
+    public bool IsTeacherConnected { get; set; }
     public string GroupName { get; set; }
     public string TeacherId { get; set; }
 }

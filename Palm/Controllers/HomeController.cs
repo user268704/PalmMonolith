@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Palm.Models.Errors;
@@ -9,9 +8,9 @@ namespace Palm.Controllers;
 
 public class HomeController : Controller
 {
+    private readonly IMapper _mapper;
     private readonly SignInManager<User> _signInManager;
     private readonly UserManager<User> _userManager;
-    private readonly IMapper _mapper;
 
     public HomeController(SignInManager<User> signInManager, UserManager<User> userManager, IMapper mapper)
     {
@@ -35,7 +34,7 @@ public class HomeController : Controller
         
         return View("Login");
     }
-    
+
     [Route("login")]
     [HttpPost]
     public async Task<IActionResult> Login(UserRegister user, string? fromSession)
@@ -74,14 +73,16 @@ public class HomeController : Controller
 
     [Route("register")]
     [HttpPost]
-    public async Task<IActionResult> Register(UserRegister user, string? fromSession)
+    public async Task<IActionResult> Register(UserRegister user, bool isTeacher, string? fromSession)
     {
         User fullUser = _mapper.Map<User>(user);
-
-        // TODO: Добавить уникальность почты
+        
         var createResult = await _userManager.CreateAsync(fullUser, user.Password);
         if (createResult.Succeeded)
         {
+            if (isTeacher) await _userManager.AddToRoleAsync(fullUser, "teacher");
+            else await _userManager.AddToRoleAsync(fullUser, "student");
+
             await _signInManager.SignInAsync(fullUser, true);
             if (string.IsNullOrEmpty(fromSession))
                 return RedirectToPage("/profile");

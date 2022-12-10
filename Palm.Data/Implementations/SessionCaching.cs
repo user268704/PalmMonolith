@@ -1,21 +1,21 @@
 ﻿using System.Text.Json;
-using Palm.Models.Cache;
+using Palm.Abstractions.Interfaces.Data;
 using Palm.Models.Sessions;
 using StackExchange.Redis;
 
-namespace Palm.Cash;
+namespace Palm.Data.Implementations;
 
 public class SessionCaching : ISessionСaching
 {
-    private readonly RedisConnect _redis;
     private readonly IDatabase _database;
+    private readonly RedisConnect _redis;
 
     public SessionCaching()
     {
         _redis = RedisConnect.GetInstance();
         _database = _redis.GetDatabase();
     }
-    
+
     public void AddSession(Session session)
     {
         string value = JsonSerializer.Serialize(session);
@@ -25,11 +25,11 @@ public class SessionCaching : ISessionСaching
         _database.StringGetSet(session.ShortId, value);
     }
 
-    public Session GetSession(string id)
+    public Session? GetSession(string id)
     {
         var value = _database.StringGet(id);
         if (value.IsNullOrEmpty)
-            throw new ArgumentException("Session not found", nameof(id));
+            return null;
 
         return JsonSerializer.Deserialize<Session>(value);
     }

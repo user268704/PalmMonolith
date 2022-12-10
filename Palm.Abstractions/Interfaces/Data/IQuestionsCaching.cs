@@ -1,6 +1,6 @@
 ﻿using Palm.Models.Sessions;
 
-namespace Palm.Cash;
+namespace Palm.Abstractions.Interfaces.Data;
 
 public interface IQuestionsCaching
 {
@@ -8,7 +8,7 @@ public interface IQuestionsCaching
     public List<Question> GetQuestionsFromSession(string sessionId);
     public void AddQuestion(Question question, string sessionId);
     public void AddQuestion(Question question, Session session);
-    
+
     public List<string> AddQuestions(List<Question> questions, string sessionId);
     public void CreateQuestion(string sessionId);
 }
