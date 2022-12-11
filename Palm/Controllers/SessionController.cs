@@ -2,11 +2,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Palm.Data.Implementations;
+using Palm.Abstractions.Interfaces.Managers;
+using Palm.Caching;
+using Palm.Infrastructure;
 using Palm.Models.Errors;
 using Palm.Models.Sessions;
 using Palm.Models.Sessions.Dto;
 using Palm.Models.Users;
+using Palm.Validator.Validators;
 
 // ReSharper disable CommentTypo
 // ReSharper disable StringLiteralTypo
@@ -19,21 +22,27 @@ public class SessionController : ControllerBase
 {
     private readonly IMapper _mapper;
     private readonly QuestionsCaching _questionsCaching;
-    private readonly SessionManager _sessionManager;
+    private readonly SessionDataContext _sessionDataContext;
+    private readonly ISessionManager _sessionManager;
     private readonly UserManager<User> _userManager;
 
-    public SessionController(SessionManager sessionManager, /*QuestionsCaching questionsCaching,*/ UserManager<User> userManager, IMapper mapper)
+    public SessionController(ISessionManager sessionManager, SessionDataContext sessionDataContext,
+        UserManager<User> userManager, IMapper mapper)
     {
         _sessionManager = sessionManager;
+        _sessionDataContext = sessionDataContext;
         _questionsCaching = new QuestionsCaching();
         _userManager = userManager;
         _mapper = mapper;
     }
 
     /// <summary>
-    /// Подключение студента к сессии
+    ///     Подключение студента к сессии
     /// </summary>
-    /// <param name="isAuthUser">Флаг который сообщает авторизован ли пользователь, если да то добавлять его по аккаунту, если нет то редирект на страницу регистрации</param>
+    /// <param name="isAuthUser">
+    ///     Флаг который сообщает авторизован ли пользователь, если да то добавлять его по аккаунту, если
+    ///     нет то редирект на страницу регистрации
+    /// </param>
     /// <param name="sessionId">Id сессии к которой будут подключаться</param>
     /*[Authorize("student")]*/
     [Route("join/{sessionId}")]
@@ -46,18 +55,18 @@ public class SessionController : ControllerBase
                 fromSession = sessionId
             });
 
-        Session? session = _sessionManager.GetSession(sessionId);
+        var session = _sessionManager.GetSession(sessionId);
         if (session == null)
-            return BadRequest(new ErrorResponse()
+            return BadRequest(new ErrorResponse
             {
                 Error = "Такой сессии не существует",
                 Message = "Сессия не найдена"
             });
-        
+
         var userName = HttpContext.User.Identity.Name;
-        
-        User? user = await _userManager.FindByNameAsync(userName);
-        
+
+        var user = await _userManager.FindByNameAsync(userName);
+
         if (user == null)
             return BadRequest(new ErrorResponse
             {
@@ -72,16 +81,17 @@ public class SessionController : ControllerBase
             HttpContext.Session.SetString("sessionId", sessionId);
         }
         catch (ArgumentException e)
-        { }
-        
+        {
+        }
+
         return RedirectToAction("Index", "SessionViews", new
         {
-            sessionId = sessionId
+            sessionId
         });
     }
 
     /// <summary>
-    /// Создаёт новую сессию
+    ///     Создаёт новую сессию
     /// </summary>
     /// <param name="sessionDto"></param>
     /// <returns></returns>
@@ -92,22 +102,23 @@ public class SessionController : ControllerBase
     [HttpPost]
     public IActionResult Create(SessionDto sessionDto)
     {
-        if (!_sessionManager.CheckValid(sessionDto))
-        {
+        var validator = new SessionCreateValidator();
+
+        var validationResult = validator.Validate(sessionDto);
+        if (!validationResult.IsValid)
             return BadRequest(new ErrorResponse
             {
-                Error = "Неверные данные",
-                Message = "Проверьте правильность введенных данных"
+                Error = "Возникли ошибки при создании сессии",
+                Message = string.Join(", ", validationResult.Errors.Select(error => error.ErrorMessage))
             });
-        }
-        
+
         sessionDto.EndDate = sessionDto.EndDate.ToUniversalTime();
         sessionDto.StartDate = sessionDto.StartDate.ToUniversalTime();
-        Session fullSession = _mapper.Map<Session>(sessionDto);
-        
-        User user = _userManager.FindByNameAsync(HttpContext.User.Identity.Name).Result;
+        var fullSession = _mapper.Map<Session>(sessionDto);
+
+        var user = _userManager.FindByNameAsync(HttpContext.User.Identity.Name).Result;
         fullSession.HostId = Guid.Parse(user.Id);
-        
+
         _sessionManager.AddSession(fullSession);
 
         return Ok();
@@ -118,9 +129,9 @@ public class SessionController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAllTeacherSessions()
     {
-        User? user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
+        var user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
         if (user == null)
-            return BadRequest(new ErrorResponse()
+            return BadRequest(new ErrorResponse
             {
                 Error = "Пользователь не найден",
                 Message = "Запрашиваемый пользователь не зарегистрирован в системе"
@@ -129,12 +140,12 @@ public class SessionController : ControllerBase
         var sessions = _sessionManager.GetAllSessions();
         var allMySessionResult = sessions
             .Where(prop => prop.HostId.ToString() == user.Id);
-        
+
         return Ok(allMySessionResult);
     }
 
     /// <summary>
-    /// Здесь можно обновить сессию, добавить вопросы, изменить название или дату окончания 
+    ///     Здесь можно обновить сессию, добавить вопросы, изменить название или дату окончания
     /// </summary>
     /// <param name="session"></param>
     /// <param name="sessionId">Id сессии которую надо изменить</param>
@@ -143,8 +154,8 @@ public class SessionController : ControllerBase
     public IActionResult UpdateSession(SessionUpdateDto session, string sessionId)
     {
         List<string> questionsId = new();
-        
-        IEnumerable<Question> fullQuestions = _mapper.Map<IEnumerable<Question>>(session.Questions);
+
+        var fullQuestions = _mapper.Map<IEnumerable<Question>>(session.Questions);
         try
         {
             if (session.Questions != null)
@@ -160,27 +171,28 @@ public class SessionController : ControllerBase
         }
 
         // BUG: При добавлении первых вопросов, мапинг работает не правильно, и мапит всё к строке
-        Session sessionToUpdate = _mapper.Map<Session>(session);
+        var sessionToUpdate = _mapper.Map<Session>(session);
         sessionToUpdate.ShortId = sessionId;
-        
-        foreach (string question in questionsId) 
-            sessionToUpdate.Questions.Add(question);
+
+        foreach (string questionId in questionsId)
+            sessionToUpdate.Questions.Add(questionId);
 
         _sessionManager.UpdateSession(sessionToUpdate);
-        
+
         return Ok();
     }
 
     [Authorize("teacher")]
     [Route("change/questions/{sessionId}")]
     [HttpPut]
-    public IActionResult ChangeQuestions([FromQuery] List<string> questions, [FromBody] List<Question> changed, string sessionId)
+    public IActionResult ChangeQuestions([FromQuery] List<string> questions, [FromBody] List<Question> changed,
+        string sessionId)
     {
         return StatusCode(501);
     }
 
     /// <summary>
-    /// Возвращает сессию по её id
+    ///     Возвращает сессию по её id
     /// </summary>
     /// <param name="shortId"></param>
     /// <returns></returns>
@@ -191,9 +203,9 @@ public class SessionController : ControllerBase
     {
         try
         {
-            Session session = _sessionManager.GetSession(shortId);
-            User user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
-            
+            var session = _sessionManager.GetSession(shortId);
+            var user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
+
             if (session.HostId.ToString() == user.Id)
                 return Ok(session);
 
@@ -211,7 +223,7 @@ public class SessionController : ControllerBase
 
 #if DEBUG
     /// <summary>
-    /// Возвращает все существующие сессии
+    ///     Возвращает все существующие сессии
     /// </summary>
     /// <returns></returns>
     [Route("get/all")]
@@ -223,7 +235,7 @@ public class SessionController : ControllerBase
 #endif
 
     /// <summary>
-    /// Удаление сессии
+    ///     Удаление сессии
     /// </summary>
     /// <param name="shortId"></param>
     /// <returns></returns>
@@ -232,8 +244,8 @@ public class SessionController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> RemoveSession(string shortId)
     {
-        User user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
-        Session session = _sessionManager.GetSession(shortId);
+        var user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
+        var session = _sessionManager.GetSession(shortId);
 
         if (user.Id == session.HostId.ToString())
         {

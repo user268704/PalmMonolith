@@ -33,7 +33,7 @@ public class UserController : ControllerBase
     public IActionResult Logout()
     {
         _signInManager.SignOutAsync();
-        
+
         return Ok();
     }
 
@@ -52,13 +52,13 @@ public class UserController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> MakeMeBoss(string rank)
     {
-        if (!await _roleManager.RoleExistsAsync(rank)) 
+        if (!await _roleManager.RoleExistsAsync(rank))
             await _roleManager.CreateAsync(new IdentityRole(rank));
 
         await _roleManager.CreateAsync(new IdentityRole("student"));
         await _roleManager.CreateAsync(new IdentityRole("teacher"));
 
-        User me = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
+        var me = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
         await _userManager.AddToRoleAsync(me, rank);
 
         return Ok("Ты теперь босс, бро");
@@ -68,7 +68,7 @@ public class UserController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetMe()
     {
-        User user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
+        var user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
 
         return Ok(user);
     }

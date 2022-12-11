@@ -31,7 +31,7 @@ public class HomeController : Controller
     public IActionResult LoginView(string? fromSession)
     {
         ViewData["fromSession"] = fromSession;
-        
+
         return View("Login");
     }
 
@@ -39,16 +39,16 @@ public class HomeController : Controller
     [HttpPost]
     public async Task<IActionResult> Login(UserRegister user, string? fromSession)
     {
-        User fullUser = _mapper.Map<User>(user);
-        User? userFromDb = await _userManager.FindByNameAsync(fullUser.UserName);
-        
+        var fullUser = _mapper.Map<User>(user);
+        var userFromDb = await _userManager.FindByNameAsync(fullUser.UserName);
+
         if (userFromDb != null && await _userManager.CheckPasswordAsync(userFromDb, user.Password))
         {
             await _signInManager.SignInAsync(userFromDb, false);
             if (string.IsNullOrEmpty(fromSession))
                 return Ok();
 
-            return RedirectToAction("Join", "Session", new 
+            return RedirectToAction("Join", "Session", new
             {
                 sessionId = fromSession,
                 isAuthUser = true
@@ -75,8 +75,8 @@ public class HomeController : Controller
     [HttpPost]
     public async Task<IActionResult> Register(UserRegister user, bool isTeacher, string? fromSession)
     {
-        User fullUser = _mapper.Map<User>(user);
-        
+        var fullUser = _mapper.Map<User>(user);
+
         var createResult = await _userManager.CreateAsync(fullUser, user.Password);
         if (createResult.Succeeded)
         {
@@ -88,13 +88,13 @@ public class HomeController : Controller
                 return RedirectToPage("/profile");
 
 
-            return RedirectToAction("Join" ,"Session", new
+            return RedirectToAction("Join", "Session", new
             {
                 sessionId = fromSession,
                 isAuthUser = true
             });
         }
-        
+
         return BadRequest(new ErrorResponse
         {
             Error = string.Join(", ", createResult.Errors.Select(x => x.Description)),

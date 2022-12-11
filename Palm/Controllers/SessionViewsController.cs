@@ -6,7 +6,6 @@ namespace Palm.Controllers;
 [Route("session")]
 public class SessionViewsController : Controller
 {
-    
     [Authorize("student")]
     [Route("{sessionId}")]
     [HttpGet]

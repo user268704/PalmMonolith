@@ -1,12 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Palm.Abstractions.Interfaces.Data;
+using Palm.Abstractions.Interfaces.Caching;
+using Palm.Abstractions.Interfaces.Managers;
+using Palm.Abstractions.Interfaces.Repositories;
 using Palm.Models.Sessions;
-using Palm.Models.Sessions.Dto;
 using Palm.Models.Users;
 
-namespace Palm;
+namespace Palm.Caching;
 
-public class SessionManager
+public class SessionManager : ISessionManager
 {
     private readonly ISessionСaching _cache;
     private readonly IQuestionsCaching _questionsCache;
@@ -24,13 +25,13 @@ public class SessionManager
         session.Id = Guid.NewGuid();
         session.ShortId = session.Id
             .ToString()[..6];
-        session.Students = new();
-        session.Questions = new();
-        session.Takes = new();
-        session.GroupInfo = new();
+        session.Students = new List<string>();
+        session.Questions = new List<string>();
+        session.Takes = new List<Take>();
+        session.GroupInfo = new SessionGroupInfo();
 
         _questionsCache.CreateQuestion(session.ShortId);
-        _cache.AddSession(session);
+        _cache.Create(session);
     }
 
     public void AddStudentToSession(Session session, User user)
@@ -39,13 +40,13 @@ public class SessionManager
             throw new ArgumentException("Студент уже есть в сессии", nameof(user));
 
         session.Students.Add(user.Id);
-        
-        _cache.AddSession(session);
+
+        _cache.Create(session);
     }
 
     public Session? GetSessionByStudentConnectionId(string connectionId)
     {
-        List<Session> sessions = GetAllSessions();
+        var sessions = GetAllSessions();
 
         return sessions.FirstOrDefault(session =>
             session.Takes.FirstOrDefault(take => take.ConnectionId == connectionId) != default);
@@ -58,15 +59,16 @@ public class SessionManager
 
     public void UpdateSession(Session updates)
     {
-        Session oldSession = GetSession(updates.ShortId);
-        
+        var oldSession = GetSession(updates.ShortId);
+
         if (updates.Questions != null) oldSession.Questions.AddRange(updates.Questions);
         if (updates.GroupInfo != null) oldSession.GroupInfo = updates.GroupInfo;
-        if (updates.Takes != null) oldSession.Takes.AddRange(updates.Takes.Except(oldSession.Takes, new TakeComparer()));
+        if (updates.Takes != null)
+            oldSession.Takes.AddRange(updates.Takes.Except(oldSession.Takes, new TakeComparer()));
         if (updates.Students != null) oldSession.Students.AddRange(updates?.Students.Except(oldSession.Students));
         if (!string.IsNullOrEmpty(updates.Title)) oldSession.Title = updates.Title;
-        
-        _cache.AddSession(oldSession);
+
+        _cache.Create(oldSession);
     }
 
     public List<Session> GetAllSessions()
@@ -76,25 +78,17 @@ public class SessionManager
 
     public void RemoveSession(string shortId)
     {
-        _cache.Remove(shortId);
+        _cache.Delete(shortId);
     }
 
-    public Session? GetSession(string id)
+    public Session? GetSession(string shortId)
     {
-        return _cache.GetSession(id);
-    }
-
-    public bool CheckValid(SessionDto session)
-    {
-        return !(string.IsNullOrEmpty(session.Title) || 
-                 session.EndDate == DateTime.MinValue ||
-                 session.StartDate == DateTime.MinValue ||
-                 session.EndDate > session.StartDate);
+        return _cache.Read(shortId);
     }
 
     public void EndSession(string sessionId)
     {
-        Session session = GetSession(sessionId);
+        var session = GetSession(sessionId);
 
         try
         {
@@ -104,8 +98,8 @@ public class SessionManager
         {
             throw new ArgumentException("Ошибка при сохранении сессии", e);
         }
-        
-        _cache.Remove(sessionId);
-        _cache.Remove(sessionId + "-questions");
+
+        _cache.Delete(sessionId);
+        _cache.Delete(sessionId + "-questions");
     }
 }

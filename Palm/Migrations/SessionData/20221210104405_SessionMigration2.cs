@@ -2,28 +2,27 @@
 
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Palm.Migrations.SessionData
+namespace Palm.Migrations.SessionData;
+
+/// <inheritdoc />
+public partial class SessionMigration2 : Migration
 {
     /// <inheritdoc />
-    public partial class SessionMigration2 : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<string>(
-                name: "ConnectionId",
-                table: "Take",
-                type: "text",
-                nullable: false,
-                defaultValue: "");
-        }
+        migrationBuilder.AddColumn<string>(
+            "ConnectionId",
+            "Take",
+            "text",
+            nullable: false,
+            defaultValue: "");
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "ConnectionId",
-                table: "Take");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            "ConnectionId",
+            "Take");
     }
 }

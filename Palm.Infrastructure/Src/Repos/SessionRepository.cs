@@ -1,8 +1,7 @@
-﻿using Palm.Abstractions.Interfaces.Data;
-using Palm.Infrastructure;
+﻿using Palm.Abstractions.Interfaces.Repositories;
 using Palm.Models.Sessions;
 
-namespace Palm.Data.Implementations;
+namespace Palm.Infrastructure.Repos;
 
 public class SessionRepository : ISessionRepository
 {
@@ -15,7 +14,7 @@ public class SessionRepository : ISessionRepository
 
     public Session GetSession(Guid sessionId)
     {
-        Session? session = _context.Sessions.Find(sessionId);
+        var session = _context.Sessions.Find(sessionId);
         if (session != null)
             return session;
 
@@ -24,7 +23,7 @@ public class SessionRepository : ISessionRepository
 
     public void DeleteSession(Guid sessionId)
     {
-        Session? session = _context.Sessions.Find(sessionId);
+        var session = _context.Sessions.Find(sessionId);
         if (session != null)
         {
             _context.Sessions.Remove(session);
@@ -33,20 +32,19 @@ public class SessionRepository : ISessionRepository
 
 
         throw new Exception("Session not found");
-        
     }
 
     public List<Question> GetQuestions(Guid sessionId)
     {
-        Session? session = _context.Sessions.Find(sessionId);
+        var session = _context.Sessions.Find(sessionId);
         if (session != null)
         {
             List<Question?> result = new();
-            foreach (string questionId in session.Questions)
+            foreach (var questionId in session.Questions)
                 result.Add(_context.Questions.Find(questionId));
-            
+
             result.RemoveAll(match => match == null);
-            
+
             return result;
         }
 
@@ -61,7 +59,7 @@ public class SessionRepository : ISessionRepository
             _context.SaveChanges();
             return;
         }
-        
+
         throw new ArgumentNullException(nameof(session));
     }
 }

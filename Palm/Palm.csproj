@@ -7,25 +7,23 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CS1591</NoWarn>
     </PropertyGroup>
-
+    
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="7.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="7.0.0" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.0">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Palm.Abstractions\Palm.Abstractions.csproj" />
-      <ProjectReference Include="..\Palm.Data\Palm.Data.csproj" />
-      <ProjectReference Include="..\Palm.Infrastructure\Palm.Infrastructure.csproj" />
-      <ProjectReference Include="..\Palm.Mapper\Palm.Mapper.csproj" />
+        <ProjectReference Include="..\Palm.Mapper\Palm.Mapper.csproj" />
+        <ProjectReference Include="..\Palm.Validator\Palm.Validator.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Migrations\SessionData" />
+        <Folder Include="Migrations\SessionData" />
     </ItemGroup>
 </Project>

@@ -8,6 +8,5 @@ public class UserDataContext : IdentityDbContext<User>
 {
     public UserDataContext(DbContextOptions<UserDataContext> options) : base(options)
     {
-        
     }
 }

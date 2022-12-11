@@ -1,6 +1,6 @@
 ﻿using Palm.Models.Sessions;
 
-namespace Palm.Abstractions.Interfaces.Data;
+namespace Palm.Abstractions.Interfaces.Repositories;
 
 public interface ISessionRepository
 {

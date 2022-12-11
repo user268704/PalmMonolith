@@ -1,10 +1,14 @@
 ﻿using System.Text.Json;
-using Palm.Abstractions.Interfaces.Data;
+using Palm.Abstractions.Interfaces.Caching;
+using Palm.Caching.Infrastructure;
 using Palm.Models.Sessions;
 using StackExchange.Redis;
 
-namespace Palm.Data.Implementations;
+namespace Palm.Caching;
 
+/// <summary>
+///     CRUD operations for sessions
+/// </summary>
 public class SessionCaching : ISessionСaching
 {
     private readonly IDatabase _database;
@@ -16,16 +20,16 @@ public class SessionCaching : ISessionСaching
         _database = _redis.GetDatabase();
     }
 
-    public void AddSession(Session session)
+    public void Create(Session session)
     {
-        string value = JsonSerializer.Serialize(session);
+        var value = JsonSerializer.Serialize(session);
         if (string.IsNullOrEmpty(value))
             throw new ArgumentException("Session is not valid", nameof(session));
 
         _database.StringGetSet(session.ShortId, value);
     }
 
-    public Session? GetSession(string id)
+    public Session? Read(string id)
     {
         var value = _database.StringGet(id);
         if (value.IsNullOrEmpty)
@@ -40,23 +44,16 @@ public class SessionCaching : ISessionСaching
 
         if (string.IsNullOrEmpty(sessionJson))
             throw new ArgumentException("Session not found", nameof(sessionShortId));
-        
-        Session session = JsonSerializer.Deserialize<Session>(sessionJson);
-        
+
+        var session = JsonSerializer.Deserialize<Session>(sessionJson);
+
         return session.Students.Any(x => x.ToString() == userId);
     }
 
-    public void Remove(string id)
+    public void Delete(string id)
     {
         _database.KeyDelete(id);
         _database.KeyDelete(id + "-questions");
-    }
-
-    public void Update(Session oldSession, Session newSession)
-    {
-        string value = JsonSerializer.Serialize(newSession);
-        
-        _database.StringSet(newSession.ShortId, value);
     }
 
     public void Update(Session sessionUpdate)
@@ -65,7 +62,7 @@ public class SessionCaching : ISessionСaching
         if (string.IsNullOrEmpty(sessionJson))
             throw new ArgumentException("Session is not valid", nameof(sessionUpdate));
 
-        Session session = JsonSerializer.Deserialize<Session>(sessionJson);
+        var session = JsonSerializer.Deserialize<Session>(sessionJson);
         sessionJson = JsonSerializer.Serialize(session);
 
         _database.StringSet(session.ShortId, sessionJson);
@@ -73,14 +70,14 @@ public class SessionCaching : ISessionСaching
 
     public List<Session> GetAllSessions()
     {
-        IServer server = _redis.GetServer();
+        var server = _redis.GetServer();
 
         var keys = server
             .Keys()
             .Where(item => item.ToString().Length == 6);
-        
+
         List<Session> sessions = new();
-        foreach (RedisKey key in keys)
+        foreach (var key in keys)
         {
             var value = _database.StringGet(key);
             if (value.IsNullOrEmpty)
@@ -94,7 +91,7 @@ public class SessionCaching : ISessionСaching
 
     public void Clear()
     {
-        IServer server = _redis.GetServer();
+        var server = _redis.GetServer();
 
         server.FlushDatabase();
     }

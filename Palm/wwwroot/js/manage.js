@@ -7,12 +7,12 @@ document.getElementById("startSession").disabled = true;
 document.getElementById("expelStudentButton")
     .addEventListener("click", function (event) {
         const studentId = document.getElementById("userId").value;
-        
+
         connection.invoke("ExpelStudent", studentId)
             .catch(function (err) {
                 return console.error(err.toString());
             });
-        
+
         event.preventDefault();
     })
 
@@ -35,15 +35,15 @@ connection.on("UserJoined", function (user) {
 connection.on("UserLeft", function (user) {
     const li = document.createElement("li");
     document.getElementById("messagesList").appendChild(li);
-    
+
     li.textContent = `${user.userName} left the session`;
 })
 
 connection.on("UserDisconnect", function (user) {
-    
+
     const li = document.createElement("li");
     document.getElementById("messagesList").appendChild(li);
-    
+
     li.textContent = `${user.userName} disconnected`;
 })
 
@@ -60,12 +60,12 @@ connection.start().then(function () {
     const urlPath = window.location.pathname;
     let sessionId = urlPath.substring(urlPath.indexOf("/"), urlPath.lastIndexOf('/'));
     sessionId = sessionId.substring(sessionId.lastIndexOf('/') + 1);
-    
+
     connection.invoke("InitialSession", sessionId)
         .catch(function (err) {
             return console.error(err.toString());
         })
-    
+
 }).catch(function (err) {
     return console.error(err.toString());
 });
@@ -75,7 +75,7 @@ document.getElementById("endSession").addEventListener("click", function (event)
     const urlPath = window.location.pathname;
     let sessionId = urlPath.substring(urlPath.indexOf("/"), urlPath.lastIndexOf('/'));
     sessionId = sessionId.substring(sessionId.lastIndexOf('/') + 1);
-    
+
     connection.invoke("EndSession", sessionId)
         .catch(function (err) {
             return console.error(err.toString());

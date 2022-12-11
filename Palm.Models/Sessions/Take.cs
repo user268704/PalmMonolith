@@ -18,7 +18,7 @@ public class TakeComparer : IEqualityComparer<Take>
         if (ReferenceEquals(x, null)) return false;
         if (ReferenceEquals(y, null)) return false;
         if (x.GetType() != y.GetType()) return false;
-        
+
         return x.StudentId == y.StudentId &&
                x.TimeStart.Equals(y.TimeStart) &&
                x.TimeCompleted.Equals(y.TimeCompleted);

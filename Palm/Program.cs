@@ -3,52 +3,48 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Palm;
-using Palm.Abstractions.Interfaces.Data;
-using Palm.Data.Implementations;
+using Palm.Abstractions.Interfaces.Caching;
+using Palm.Abstractions.Interfaces.Managers;
+using Palm.Abstractions.Interfaces.Repositories;
+using Palm.Caching;
 using Palm.Infrastructure;
+using Palm.Infrastructure.Repos;
+using Palm.Mapper.Mapping;
 using Palm.Models.Users;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
-// builder.Services.AddControllers();
-// builder.Services.AddControllersWithViews();
 builder.Services.AddMvc();
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddAutoMapper(typeof(Palm.Mapper.Mapping.MappingProfiler).Assembly);
+builder.Services.AddAutoMapper(typeof(MappingProfiler).Assembly);
 
 builder.Services.AddScoped<ISessionСaching, SessionCaching>();
 builder.Services.AddScoped<IQuestionsCaching, QuestionsCaching>();
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
-builder.Services.AddScoped<SessionManager>();
+builder.Services.AddScoped<ISessionManager, SessionManager>();
 
-builder.Services.AddSignalR();
-builder.Services.AddSession();
+builder.Services.AddSignalR(); 
 builder.Services.AddDistributedMemoryCache();
 
-builder.Services.AddIdentity<User, IdentityRole>(options =>
-    {
-        options.User.RequireUniqueEmail = true;
-    })
+builder.Services.AddIdentity<User, IdentityRole>(options => { options.User.RequireUniqueEmail = true; })
     .AddEntityFrameworkStores<UserDataContext>()
     .AddRoles<IdentityRole>();
 
 builder.Services.AddSwaggerGen(options =>
 {
-    string xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    string xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile); 
-    
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+
     options.IncludeXmlComments(xmlPath);
 });
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("teacher", 
+    options.AddPolicy("teacher",
         policy => policy.RequireRole("teacher"));
-    options.AddPolicy("student", 
+    options.AddPolicy("student",
         policy => policy.RequireRole("student"));
 });
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -61,7 +57,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddDbContext<UserDataContext>(options =>
 {
-    options.UseNpgsql("Host=localhost;Port=5432;Database=Palm.Users;Username=postgres;Password=str33tf1ght3r", 
+    options.UseNpgsql("Host=localhost;Port=5432;Database=Palm.Users;Username=postgres;Password=str33tf1ght3r",
         b => b.MigrationsAssembly("Palm"));
 }, ServiceLifetime.Transient);
 
@@ -80,7 +76,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseSession();
+app.UseStaticFiles();
 
 app.UseRouting();
 app.UseHttpsRedirection();
@@ -89,11 +85,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHub<SessionHub>("api/signalr/session");
-app.UseStaticFiles();
-app.MapControllers();
 
 app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller}/{action=Index}/{id?}");
+    "default",
+    "{controller}/{action=Index}/{id?}");
 
 app.Run();
