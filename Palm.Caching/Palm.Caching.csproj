@@ -7,14 +7,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Palm.Abstractions\Palm.Abstractions.csproj"/>
-        <ProjectReference Include="..\Palm.Infrastructure\Palm.Infrastructure.csproj"/>
-        <ProjectReference Include="..\Palm.Models\Palm.Models.csproj"/>
+        <ProjectReference Include="..\Palm.Abstractions\Palm.Abstractions.csproj" />
+        <ProjectReference Include="..\Palm.Exceptions\Palm.Exceptions.csproj" />
+        <ProjectReference Include="..\Palm.Infrastructure\Palm.Infrastructure.csproj" />
+        <ProjectReference Include="..\Palm.Models\Palm.Models.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="StackExchange.Redis" Version="2.6.80"/>
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0"/>
+        <PackageReference Include="StackExchange.Redis" Version="2.6.80" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
     </ItemGroup>
 
 </Project>

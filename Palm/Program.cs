@@ -20,7 +20,7 @@ builder.Services.AddMvc();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddAutoMapper(typeof(MappingProfiler).Assembly);
 
-builder.Services.AddScoped<ISessionСaching, SessionCaching>();
+builder.Services.AddScoped<ISessionCaching, SessionCaching>();
 builder.Services.AddScoped<IQuestionsCaching, QuestionsCaching>();
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 builder.Services.AddScoped<ISessionManager, SessionManager>();

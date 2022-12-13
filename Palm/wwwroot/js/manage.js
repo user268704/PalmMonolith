@@ -8,7 +8,11 @@ document.getElementById("expelStudentButton")
     .addEventListener("click", function (event) {
         const studentId = document.getElementById("userId").value;
 
-        connection.invoke("ExpelStudent", studentId)
+        const urlPath = window.location.pathname;
+        let sessionId = urlPath.substring(urlPath.indexOf("/"), urlPath.lastIndexOf('/'));
+        sessionId = sessionId.substring(sessionId.lastIndexOf('/') + 1);
+        
+        connection.invoke("ExpelStudent", sessionId, studentId)
             .catch(function (err) {
                 return console.error(err.toString());
             });

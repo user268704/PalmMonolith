@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Palm.Abstractions.Interfaces.Caching;
 using Palm.Caching.Infrastructure;
+using Palm.Exceptions;
 using Palm.Models.Sessions;
 using StackExchange.Redis;
 
@@ -28,7 +29,10 @@ public class QuestionsCaching : IQuestionsCaching
 
     public List<Question> GetQuestionsFromSession(string sessionId)
     {
-        string questionsJson = _database.StringGet(sessionId + QUESTION_POSTFIX);
+        string? questionsJson = _database.StringGet(sessionId + QUESTION_POSTFIX);
+        if (string.IsNullOrEmpty(questionsJson))
+            throw new NotFoundException("Сессия не найдена", "Session");
+
         var questions = JsonSerializer.Deserialize<List<Question>>(questionsJson);
 
         return questions;
@@ -53,7 +57,7 @@ public class QuestionsCaching : IQuestionsCaching
     {
         string? questionsJson = _database.StringGet(sessionId + QUESTION_POSTFIX);
         if (questionsJson == null)
-            throw new ArgumentException("Session does not exist", nameof(sessionId));
+            throw new NotFoundException("Сессия не найдена", "Session");
 
         var questionsList = JsonSerializer.Deserialize<List<Question>>(questionsJson)
                             ?? new List<Question>();

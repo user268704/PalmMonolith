@@ -2,7 +2,7 @@
 
 namespace Palm.Abstractions.Interfaces.Caching;
 
-public interface ISessionСaching
+public interface ISessionCaching
 {
     public void Create(Session cache);
     public Session? Read(string id);

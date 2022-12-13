@@ -9,7 +9,7 @@ namespace Palm.Caching;
 /// <summary>
 ///     CRUD operations for sessions
 /// </summary>
-public class SessionCaching : ISessionСaching
+public class SessionCaching : ISessionCaching
 {
     private readonly IDatabase _database;
     private readonly RedisConnect _redis;
@@ -26,7 +26,7 @@ public class SessionCaching : ISessionСaching
         if (string.IsNullOrEmpty(value))
             throw new ArgumentException("Session is not valid", nameof(session));
 
-        _database.StringGetSet(session.ShortId, value);
+        _database.StringSet(session.ShortId, value);
     }
 
     public Session? Read(string id)
@@ -56,6 +56,7 @@ public class SessionCaching : ISessionСaching
         _database.KeyDelete(id + "-questions");
     }
 
+    // TODO: Не работает
     public void Update(Session sessionUpdate)
     {
         string? sessionJson = _database.StringGet(sessionUpdate.ShortId);

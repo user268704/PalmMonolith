@@ -34,11 +34,11 @@ public class SessionHub : Hub
             QuestionId = questionId
         });
 
-        _sessionManager.UpdateSession(session);
+        _sessionManager.AddUpdates(session);
     }
 
     [Authorize("teacher")]
-    public void EndSession(string sessionId)
+    public async Task EndSession(string sessionId)
     {
         try
         {
@@ -46,7 +46,7 @@ public class SessionHub : Hub
         }
         catch (ArgumentException e)
         {
-            Clients.Caller.SendAsync("Error", new ErrorResponse
+            await SendErrorAndAbortAsync(new ErrorResponse
             {
                 Error = e.ToString(),
                 Message = e.Message
@@ -55,7 +55,7 @@ public class SessionHub : Hub
             return;
         }
 
-        Clients.Group(sessionId).SendAsync("SessionEnded");
+        await Clients.Group(sessionId).SendAsync("SessionEnded");
     }
 
     public void StartSession(string sessionId)
@@ -77,43 +77,42 @@ public class SessionHub : Hub
 
         if (!session.Students.Contains(user.Id))
         {
-            await Clients.Caller.SendAsync("Error", new ErrorResponse
+            await SendErrorAndAbortAsync(new ErrorResponse
             {
                 Error = "Нет доступа к сессии",
                 Message = "Вы не являетесь участником сессии"
             });
 
-            Context.Abort();
             return;
         }
 
+        if (!session.IsConnectAfterStart && IsSessionActive(session))
+        {
+            await SendErrorAndAbortAsync(new ErrorResponse
+            {
+                Error = "Нет доступа к сессии",
+                Message = "К этой сессии нельзя подключиться после ее начала"
+            });
+            
+            return;
+        }
+        
         if (!IsSessionActive(session))
         {
-            await Clients.Caller.SendAsync("Error", new ErrorResponse
+            await SendErrorAndAbortAsync(new ErrorResponse
             {
                 Error = "Нет доступа к сессии",
                 Message = "Сессия не активна"
             });
-
-            Context.Abort();
+            
             return;
         }
-
-        var take = session.Takes.Find(prop => prop.StudentId == user.Id);
-        if (take == null)
-            session.Takes.Add(new Take
-            {
-                ConnectionId = Context.ConnectionId,
-                StudentId = user.Id,
-                TimeStart = TimeOnly.FromDateTime(DateTime.Now)
-            });
 
         await Groups.AddToGroupAsync(Context.ConnectionId, session.GroupInfo.GroupName);
         var userRegister = _mapper.Map<UserRegister>(user);
 
-        _sessionManager.UpdateSession(session);
-
-        await Clients.Client(session.GroupInfo.TeacherId).SendAsync("UserJoined", userRegister);
+        await Clients.Client(session.GroupInfo.TeacherId)
+            .SendAsync("UserJoined", userRegister);
     }
 
     [Authorize("teacher")]
@@ -129,81 +128,57 @@ public class SessionHub : Hub
         await Groups.RemoveFromGroupAsync(take.ConnectionId, session.GroupInfo.GroupName);
     }
 
-    /*
     public override async Task OnConnectedAsync()
-    {
-        Session? sessionIfIsStudent = _sessionManager.GetSessionByStudentConnectionId(Context.ConnectionId);
-        Session? sessionIfIsTeacher;
+    { 
+        User user = await _userManager.FindByNameAsync(Context.User.Identity.Name);
 
-        if (Context.User == null)
+        if (await _userManager.IsInRoleAsync(user, "student"))
         {
-            Clients.Caller.SendAsync("Error", new ErrorResponse
+            Session? session = _sessionManager.GetSessionsByStudent(user.Id);
+            if (user != null && session != null)
             {
-                Error = "Вы не авторизованы",
-                Message = "Пожалуйста, войдите в свой аккаунт или зарегистрируйтесь"
-            });
+                StudentConnection(session, user);
 
-            Context.Abort();
-            return;
-        }
-        
-        User? user = await _userManager.FindByNameAsync(Context.User.Identity.Name);
-        if (user == null)
-        {
-            await Clients.Caller.SendAsync("Error", new ErrorResponse()
-            {
-                Error = "Ошибка авторизации",
-                Message = "Пользователь не авторизован"
-            });
-            
-            Context.Abort();
-            return;
-        }
-
-        // Если заходит учитель
-        if (await _userManager.IsInRoleAsync(user, "teacher") &&
-            sessionIfIsTeacher.HostId == Guid.Parse((ReadOnlySpan<char>)user.Id))
-            return;
-
-        // Сессия может быть не найдена, если ученик не зашел в сессию
-        if (session == null)
-        {
-            Clients.Caller.SendAsync("Error", new ErrorResponse()
-            {
-                Error = "Нет доступа к сессии",
-                Message = "Вы не являетесь участником сессии"
-            });
-
-            var f = Context.UserIdentifier;
-            
-            Context.Abort();
+                await Clients.Client(session.GroupInfo.TeacherId)
+                    .SendAsync("UserJoined", _mapper.Map<UserRegister>(user));
+            }
         }
     }
-    */
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         var session = _sessionManager.GetSessionByStudentConnectionId(Context.ConnectionId);
-        var take = session.Takes.Find(take => take.ConnectionId == Context.ConnectionId);
+        
+        // TODO: Сделать нормально
+        if (session == null)
+        {
+            var teacherSession = _sessionManager.GetSessionByTeacherConnectionId(Context.ConnectionId);
+            teacherSession.GroupInfo.IsTeacherConnected = false;
 
+            _sessionManager.UpdateSession(teacherSession);
+            return;
+        }
+        
+        
+        var take = session.Takes.Find(take => take.ConnectionId == Context.ConnectionId);
+        
         session.Takes.Remove(take);
         _sessionManager.UpdateSession(session);
+        
         await Clients.Client(session.GroupInfo.TeacherId).SendAsync("UserLeft", take.StudentId);
     }
 
     [Authorize("teacher")]
-    public void InitialSession(string sessionId)
+    public async Task InitialSession(string sessionId)
     {
         var session = _sessionManager.GetSession(sessionId);
         if (session == null)
         {
-            Clients.Caller.SendAsync("Error", new ErrorResponse
+            await SendErrorAndAbortAsync(new ErrorResponse
             {
                 Error = "Сессии не существует",
                 Message = "Сессии с таким идентификатором не существует"
             });
-
-            Context.Abort();
             return;
         }
 
@@ -232,5 +207,55 @@ public class SessionHub : Hub
         return session.GroupInfo.IsTeacherConnected &&
                !string.IsNullOrEmpty(session.GroupInfo.TeacherId) &&
                !string.IsNullOrEmpty(session.GroupInfo.GroupName);
+    }
+
+    private async Task SendErrorAndAbortAsync(ErrorResponse error)
+    {
+        await Clients.Caller.SendAsync("Error", error);
+        
+        Context.Abort();
+    }
+
+    private async Task SendErrorAndAbortAsync(ErrorResponse error, string connectionId)
+    {
+        await Clients.Client(connectionId).SendAsync("Error", error);
+
+        Context.Abort();
+    }
+
+    private void StudentConnection(Session session, User user)
+    {
+        var take = session.Takes.Find(prop => prop.StudentId == user.Id);
+        if (take == null)
+        {
+            session.Takes = new();
+            session.Takes.Add(new Take
+            {
+                ConnectionId = Context.ConnectionId,
+                StudentId = user.Id,
+                TimeStart = TimeOnly.FromDateTime(DateTime.Now)
+            });
+        }
+        else take.ConnectionId = Context.ConnectionId;
+        
+        _sessionManager.UpdateSession(session);
+    }
+
+    private async Task UpdateTakeAsync(Session session, User user)
+    {
+        Take? take = session.Takes.Find(take => take.StudentId == user.Id);
+        if (take == null)
+        {
+            await SendErrorAndAbortAsync(new ErrorResponse()
+            {
+                Error = "Ошибка",
+                Message = "Вы не подключены к сессии"
+            });
+
+            return;
+        }
+
+        session.Takes.RemoveAll(take1 => take1.StudentId == user.Id);
+        session.Takes.Add(take);
     }
 }

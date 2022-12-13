@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Palm.Abstractions.Interfaces.Managers;
 using Palm.Caching;
+using Palm.Exceptions;
 using Palm.Infrastructure;
 using Palm.Models.Errors;
 using Palm.Models.Sessions;
@@ -78,10 +79,11 @@ public class SessionController : ControllerBase
         {
             // ArgumentException если студент уже подключен к сессии
             _sessionManager.AddStudentToSession(session, user);
-            HttpContext.Session.SetString("sessionId", sessionId);
         }
-        catch (ArgumentException e)
+        catch (ArgumentException)
         {
+            // Просто редиректим в любом случае, если подключен то может пройти,
+            // если нет то выше подключается
         }
 
         return RedirectToAction("Index", "SessionViews", new
@@ -100,12 +102,12 @@ public class SessionController : ControllerBase
     [Authorize("teacher")]
     [Route("create")]
     [HttpPost]
-    public IActionResult Create(SessionDto sessionDto)
+    public async Task<IActionResult> Create(SessionDto sessionDto)
     {
         var validator = new SessionCreateValidator();
 
         var validationResult = validator.Validate(sessionDto);
-        if (!validationResult.IsValid)
+        if (!validationResult.IsValid) 
             return BadRequest(new ErrorResponse
             {
                 Error = "Возникли ошибки при создании сессии",
@@ -114,16 +116,34 @@ public class SessionController : ControllerBase
 
         sessionDto.EndDate = sessionDto.EndDate.ToUniversalTime();
         sessionDto.StartDate = sessionDto.StartDate.ToUniversalTime();
+
+        var fullQuestions = _mapper.Map<IEnumerable<Question>>((ICollection<QuestionUpdateDto>) sessionDto.Questions);
         var fullSession = _mapper.Map<Session>(sessionDto);
 
-        var user = _userManager.FindByNameAsync(HttpContext.User.Identity.Name).Result;
+        fullSession.Questions = fullQuestions
+            .Select(question => question.Id.ToString())
+            .ToList();
+        
+        var user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
         fullSession.HostId = Guid.Parse(user.Id);
 
-        _sessionManager.AddSession(fullSession);
+        _sessionManager.CreateSession(fullSession);
+
+        // Здесь устанавливается ShortId потому что в CreateSession он устанавливается к сессии по ссылке
+        _questionsCaching.AddQuestions(fullQuestions.ToList(), fullSession.ShortId);
+        
+        // Вопросы добавляем именно тут а не при создании, потому что
+        // благодаря методу выше они уже проинициализированы и записаны в Redis
+        // такие какие они и будут
+        _sessionManager.AddQuestions(fullQuestions.ToList(), fullSession);
 
         return Ok();
     }
 
+    /// <summary>
+    /// Возвращает все сессии учителя
+    /// </summary>
+    /// <returns></returns>
     [Authorize("teacher")]
     [Route("get/all-my")]
     [HttpGet]
@@ -140,7 +160,7 @@ public class SessionController : ControllerBase
         var sessions = _sessionManager.GetAllSessions();
         var allMySessionResult = sessions
             .Where(prop => prop.HostId.ToString() == user.Id);
-
+        
         return Ok(allMySessionResult);
     }
 
@@ -161,7 +181,7 @@ public class SessionController : ControllerBase
             if (session.Questions != null)
                 questionsId = _questionsCaching.AddQuestions(fullQuestions.ToList(), sessionId);
         }
-        catch (ArgumentException e)
+        catch (NotFoundException e)
         {
             return BadRequest(new ErrorResponse
             {
@@ -177,7 +197,7 @@ public class SessionController : ControllerBase
         foreach (string questionId in questionsId)
             sessionToUpdate.Questions.Add(questionId);
 
-        _sessionManager.UpdateSession(sessionToUpdate);
+        _sessionManager.AddUpdates(sessionToUpdate);
 
         return Ok();
     }
@@ -221,6 +241,38 @@ public class SessionController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Возвращает все вопросы сессии
+    /// </summary>
+    /// <param name="sessionId">Id сессии</param>
+    [Route("get/questions/{sessionId}")]
+    [HttpGet]
+    public IActionResult GetQuestions(string sessionId)
+    {
+        Session? session = _sessionManager.GetSession(sessionId);
+        if (session == null)
+            return BadRequest(new ErrorResponse
+            {
+                Error = "Сессия не найдена",
+                Message = "Сессия с таким id не найдена"
+            });
+
+        try
+        {
+            var questions = _questionsCaching.GetQuestionsFromSession(sessionId);
+
+            return Ok(questions);
+        }
+        catch (NotFoundException e)
+        {
+            return BadRequest(new ErrorResponse
+            {
+                Error = e.WhatNotHound + " не найден",
+                Message = e.Message
+            });
+        }
+    }
+
 #if DEBUG
     /// <summary>
     ///     Возвращает все существующие сессии
@@ -237,8 +289,6 @@ public class SessionController : ControllerBase
     /// <summary>
     ///     Удаление сессии
     /// </summary>
-    /// <param name="shortId"></param>
-    /// <returns></returns>
     [Authorize("teacher")]
     [Route("remove/{shortId}")]
     [HttpPost]

@@ -6,6 +6,8 @@ public class Session
     public Guid HostId { get; set; }
     public string ShortId { get; set; }
     public string Title { get; set; }
+    public Guid? ClassId { get; set; }
+    public bool IsConnectAfterStart { get; set; }
     public SessionGroupInfo GroupInfo { get; set; }
     public List<string> Students { get; set; }
     public List<string> Questions { get; set; }
