@@ -1,25 +1,61 @@
-﻿@{
-    Layout = null;
+﻿@page
+
+@{
+    Layout = "_Layout";
 }
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Login</title>
-</head>
-<body>
-<div>
-    <h1>Логин</h1>
-    <form action="/login" method="post">
-        <input type="text" placeholder="Никнейм" name="UserName" id="userName">
-        <input type="text" placeholder="Имя" name="Name" id="name">
-        <input type="text" placeholder="Фамилия" name="LastName" id="lastName">
-        <input type="email" placeholder="Почта" name="Email" id="email">
-        <input type="password" placeholder="Пароль" name="Password" id="password">
-        <input type="hidden" name="fromSession" value="@ViewData["fromSession"]">
+<div id="zatemnenie">
+        <div class="container d-flex flex-column justify-content-around" id="popup">
+            <div class="row">
+                <div class="d-flex justify-content-between">
+                    <div class="logo">RuTest</div>
+                    <a class="close" href="#">
+                        <img src="pictures/1487086345-cross_81577.svg" alt="+">
+                    </a>
+                </div>
+            </div>
+            <div class="row">
+                <form>
+                    <div class="mb-3">
+                        <label for="exampleInputEmail1" class="form-label">Почта или никнейм</label>
+                        <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
+                    </div>
+                    <div class="mb-3">
+                        <label for="exampleInputPassword1" class="form-label">Пароль</label>
+                        <input type="password" class="form-control" id="exampleInputPassword1">
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="exampleCheck1">
+                        <label class="form-check-label" for="exampleCheck1">Запомнить меня</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary ">Войти</button>
+                </form>
+            </div>
+            <div class="row">
+                <div class="d-flex justify-content-center">
+                    <div class="align-self-center">
+                        <hr>
+                    </div>
+                    <div style="font-size: 25px; color: rgb(108, 108, 108);">ИЛИ</div>
+                    <div class="align-self-center">
+                        <hr>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <form method="post" action="/login-provider">
+                    <button type="submit" value="Google" class="btn btn-primary"></button>
+                </form>
 
-        <input type="submit" value="Залогиниться">
-    </form>
-</div>
-</body>
-</html>
+                <div class="d-flex justify-content-around">
+                    <div id="g_id_onload" data-client_id="684061569948-qkge5t2rfm82qddncadkc6scl7qfp4q8.apps.googleusercontent.com"
+                         data-login_uri="/login-with-google" data-auto_prompt="false">
+                    </div>
+                    <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline"
+                         data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left">
+                    </div>
+                    <img src="icons8-facebook.svg" alt="F">
+                </div>
+            </div>
+        </div>
+    </div>

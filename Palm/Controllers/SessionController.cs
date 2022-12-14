@@ -6,6 +6,7 @@ using Palm.Abstractions.Interfaces.Managers;
 using Palm.Caching;
 using Palm.Exceptions;
 using Palm.Infrastructure;
+using Palm.Models;
 using Palm.Models.Errors;
 using Palm.Models.Sessions;
 using Palm.Models.Sessions.Dto;
@@ -137,6 +138,19 @@ public class SessionController : ControllerBase
         // такие какие они и будут
         _sessionManager.AddQuestions(fullQuestions.ToList(), fullSession);
 
+        return Ok();
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="classStudents"></param>
+    /// <returns></returns>
+    [Authorize("teacher")]
+    [Route("add/class")]
+    [HttpPost]
+    public IActionResult SaveClass(ClassStudents classStudents)
+    {
         return Ok();
     }
 

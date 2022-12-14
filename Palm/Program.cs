@@ -53,6 +53,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/login";
         options.LogoutPath = "/logout";
         options.AccessDeniedPath = "/denied";
+    })
+    .AddGoogle(options =>
+    {
+        options.ClientId = "684061569948-qkge5t2rfm82qddncadkc6scl7qfp4q8.apps.googleusercontent.com";
+        options.ClientSecret = "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";
     });
 
 builder.Services.AddDbContext<UserDataContext>(options =>
