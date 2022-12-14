@@ -1,9 +1,8 @@
 ﻿namespace Palm.Models.Sessions;
 
-public class QuestionAnswer
+public class QuestionAnswerDto
 {
-    public Guid Id { get; set; }
+    public string Sessionid { get; set; }
     public string QuestionId { get; set; }
     public int AnswerId { get; set; }
-    public bool IsCorrect { get; set; }
 }

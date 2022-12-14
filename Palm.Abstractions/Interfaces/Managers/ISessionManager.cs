@@ -15,6 +15,7 @@ public interface ISessionManager
     void UpdateSession(Session session);
     void AddQuestions(List<Question> questions, Session session);
     List<Session> GetAllSessions();
+    bool ReplyToQuestion(Session session, User user, string questionId, string answerId);
     void RemoveSession(string shortId);
     Session? GetSession(string shortId);
     void EndSession(string sessionId);

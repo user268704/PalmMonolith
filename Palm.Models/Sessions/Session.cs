@@ -8,10 +8,12 @@ public class Session
     public string Title { get; set; }
     public Guid? ClassId { get; set; }
     public bool IsConnectAfterStart { get; set; }
+    public bool IsAllowedChangedAnswers { get; set; }
     public SessionGroupInfo GroupInfo { get; set; }
     public List<string> Students { get; set; }
     public List<string> Questions { get; set; }
     public List<Take> Takes { get; set; }
+    public DateTime CreateDate { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
 }

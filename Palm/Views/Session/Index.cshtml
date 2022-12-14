@@ -8,17 +8,18 @@
     <div class="col-6">
         <ul id="messagesList"></ul>
     </div>
-
+    
     <div class="questions">
-        <ul id="questionList">
-            <div class="question">
-                <h3 id="questionTitle"></h3>
-                <div class="question_body">
-                    <ul id="answersList"></ul>
-                </div>
-            </div>
+        <ul id="questionsList">
+            
         </ul>
     </div>
+    
+    <input type="text" placeholder="ID вопроса" name="questionId" id="questionId">
+    <input type="number" placeholder="ID ответа" name="answerId" id="answerId">
+    
+    <input type="button" id="sendResponse" value="Отправить ответ">
+    
 </div>
 <script src="~/js/signalr/dist/browser/signalr.js"></script>
 <script src="~/js/student.js"></script>

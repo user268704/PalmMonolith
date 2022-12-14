@@ -6,6 +6,8 @@ public class SessionDto
     public List<QuestionUpdateDto>? Questions { get; set; }
     public Guid? ClassId { get; set; }
     public bool IsConnectAfterStart { get; set; }
+    public bool IsAllowedChangedAnswers { get; set; }
+    public DateTime CreateDate { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
 }

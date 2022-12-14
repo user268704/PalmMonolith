@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Palm.Validator", "Palm.Vali
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Palm.Exceptions", "Palm.Exceptions\Palm.Exceptions.csproj", "{2F8444FA-F3F5-4300-AF7F-8D24070CF463}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASP.NETCoreWebApplication1", "ASP.NETCoreWebApplication1\ASP.NETCoreWebApplication1.csproj", "{62180B92-8559-456A-BD15-A3A5B0A0A379}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -64,6 +66,10 @@ Global
 		{2F8444FA-F3F5-4300-AF7F-8D24070CF463}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2F8444FA-F3F5-4300-AF7F-8D24070CF463}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2F8444FA-F3F5-4300-AF7F-8D24070CF463}.Release|Any CPU.Build.0 = Release|Any CPU
+		{62180B92-8559-456A-BD15-A3A5B0A0A379}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{62180B92-8559-456A-BD15-A3A5B0A0A379}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{62180B92-8559-456A-BD15-A3A5B0A0A379}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{62180B92-8559-456A-BD15-A3A5B0A0A379}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{2281B9E5-AB21-422D-A83E-EF2782AC566A} = {859D4246-0FAB-461D-BE12-5B0C134C0BC4}

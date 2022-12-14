@@ -22,19 +22,46 @@ public class SessionHub : Hub
         _userManager = userManager;
     }
 
-    public async Task Reply(string sessionId, string questionId, int answerId)
+    [Authorize("student")]
+    public async Task Reply(string sessionId, string questionId, string answerId)
     {
         var session = _sessionManager.GetSession(sessionId);
         var user = await _userManager.FindByNameAsync(Context.User.Identity.Name);
 
-        var take = session.Takes.Find(take => take.StudentId == user.Id);
-        take.QuestionAnswers.Add(new QuestionAnswer
+        if (session != null && user != null)
         {
-            AnswerId = answerId,
-            QuestionId = questionId
-        });
 
-        _sessionManager.AddUpdates(session);
+            bool isCorrect;
+            try
+            {
+                isCorrect = _sessionManager.ReplyToQuestion(session, user, questionId, answerId);
+            }
+            catch (ArgumentException e)
+            {
+                await SendError(new ErrorResponse
+                {
+                    Error = e.Message,
+                    Message = e.Message
+                });
+                
+                return;
+            }
+            
+             
+             await Clients.Client(session.GroupInfo.TeacherId).SendAsync("UserReply", new
+             {
+                 userName = user.UserName,
+                 question = questionId,
+                 answer = answerId,
+                 isCorrect
+             });
+        }
+        else 
+            await SendErrorAndAbortAsync(new ErrorResponse()
+            {
+                Error = (session == null ? "Сессия не найдена" : String.Empty) +
+                        (user == null ? "Вы не опознаны" : String.Empty)
+            });
     }
 
     [Authorize("teacher")]
@@ -108,8 +135,12 @@ public class SessionHub : Hub
             return;
         }
 
+        
         await Groups.AddToGroupAsync(Context.ConnectionId, session.GroupInfo.GroupName);
+        StudentConnection(session, user);
+        
         var userRegister = _mapper.Map<UserRegister>(user);
+        
 
         await Clients.Client(session.GroupInfo.TeacherId)
             .SendAsync("UserJoined", userRegister);
@@ -214,6 +245,11 @@ public class SessionHub : Hub
         await Clients.Caller.SendAsync("Error", error);
         
         Context.Abort();
+    }
+
+    private async Task SendError(ErrorResponse error)
+    {
+        await Clients.Caller.SendAsync("Error", error);
     }
 
     private async Task SendErrorAndAbortAsync(ErrorResponse error, string connectionId)

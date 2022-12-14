@@ -15,6 +15,9 @@ public class MappingProfiler : Profile
         CreateMap<Session, SessionUpdateDto>()
             .ReverseMap();
 
+        CreateMap<Session, SessionStudentDto>()
+            .ReverseMap();
+        
         CreateMap<User, UserRegister>()
             .ForMember(options => options.Password, options => options.Ignore())
             .ReverseMap();
@@ -25,10 +28,16 @@ public class MappingProfiler : Profile
         CreateMap<Answer, AnswerUpdateDto>()
             .ReverseMap();
 
+        CreateMap<QuestionAnswer, QuestionAnswerDto>()
+            .ReverseMap();
+
         CreateMap<ICollection<Question>, ICollection<QuestionUpdateDto>>()
             .ReverseMap();
 
         CreateMap<ICollection<Answer>, ICollection<AnswerUpdateDto>>()
+            .ReverseMap();
+        
+        CreateMap<ICollection<Session>, ICollection<SessionStudentDto>>()
             .ReverseMap();
     }
 }

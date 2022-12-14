@@ -44,19 +44,19 @@ public class SessionController : ControllerBase
     ///     Флаг который сообщает авторизован ли пользователь, если да то добавлять его по аккаунту, если
     ///     нет то редирект на страницу регистрации
     /// </param>
-    /// <param name="sessionId">Id сессии к которой будут подключаться</param>
+    /// <param name="shortId">Id сессии к которой будут подключаться</param>
     /*[Authorize("student")]*/
-    [Route("join/{sessionId}")]
+    [Route("join/{shortId}")]
     [HttpGet]
-    public async Task<IActionResult> Join(bool isAuthUser, string sessionId)
+    public async Task<IActionResult> Join(bool isAuthUser, string shortId)
     {
         if (!isAuthUser)
             return RedirectToAction("LoginView", "Home", new
             {
-                fromSession = sessionId
+                fromSession = shortId
             });
 
-        var session = _sessionManager.GetSession(sessionId);
+        var session = _sessionManager.GetSession(shortId);
         if (session == null)
             return BadRequest(new ErrorResponse
             {
@@ -88,14 +88,13 @@ public class SessionController : ControllerBase
 
         return RedirectToAction("Index", "SessionViews", new
         {
-            sessionId
+            sessionId = shortId
         });
     }
 
     /// <summary>
     ///     Создаёт новую сессию
     /// </summary>
-    /// <param name="sessionDto"></param>
     /// <returns></returns>
     /// TODO: Какого-то хера тут я не прохожу проверку будучи учителем 🤦‍
     /// а в другом эндпоинте с таким же атрибутом и в этом же аккаунте всё хорошо
@@ -116,6 +115,7 @@ public class SessionController : ControllerBase
 
         sessionDto.EndDate = sessionDto.EndDate.ToUniversalTime();
         sessionDto.StartDate = sessionDto.StartDate.ToUniversalTime();
+        sessionDto.CreateDate = DateTime.Now;
 
         var fullQuestions = _mapper.Map<IEnumerable<Question>>((ICollection<QuestionUpdateDto>) sessionDto.Questions);
         var fullSession = _mapper.Map<Session>(sessionDto);
@@ -147,7 +147,7 @@ public class SessionController : ControllerBase
     [Authorize("teacher")]
     [Route("get/all-my")]
     [HttpGet]
-    public async Task<IActionResult> GetAllTeacherSessions()
+    public async Task<IActionResult> GetAllTeacherSessions(bool onlyActive)
     {
         var user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
         if (user == null)
@@ -160,18 +160,28 @@ public class SessionController : ControllerBase
         var sessions = _sessionManager.GetAllSessions();
         var allMySessionResult = sessions
             .Where(prop => prop.HostId.ToString() == user.Id);
+
+        if (!onlyActive)
+        {
+            List<Session> sessionsFromDb = new List<Session>(_sessionDataContext.Sessions
+                .Where(session => session.HostId.ToString() == user.Id));
+            
+            allMySessionResult = allMySessionResult.Concat(sessionsFromDb);
+        }
+
+        var result = _mapper.Map<ICollection<SessionDto>>(allMySessionResult);
         
-        return Ok(allMySessionResult);
+        return Ok(result);
     }
 
     /// <summary>
     ///     Здесь можно обновить сессию, добавить вопросы, изменить название или дату окончания
     /// </summary>
     /// <param name="session"></param>
-    /// <param name="sessionId">Id сессии которую надо изменить</param>
-    [Route("update/{sessionId}")]
+    /// <param name="shortId">Id сессии которую надо изменить</param>
+    [Route("update/{shortId}")]
     [HttpPut]
-    public IActionResult UpdateSession(SessionUpdateDto session, string sessionId)
+    public IActionResult UpdateSession(SessionUpdateDto session, string shortId)
     {
         List<string> questionsId = new();
 
@@ -179,7 +189,7 @@ public class SessionController : ControllerBase
         try
         {
             if (session.Questions != null)
-                questionsId = _questionsCaching.AddQuestions(fullQuestions.ToList(), sessionId);
+                questionsId = _questionsCaching.AddQuestions(fullQuestions.ToList(), shortId);
         }
         catch (NotFoundException e)
         {
@@ -192,7 +202,7 @@ public class SessionController : ControllerBase
 
         // BUG: При добавлении первых вопросов, мапинг работает не правильно, и мапит всё к строке
         var sessionToUpdate = _mapper.Map<Session>(session);
-        sessionToUpdate.ShortId = sessionId;
+        sessionToUpdate.ShortId = shortId;
 
         foreach (string questionId in questionsId)
             sessionToUpdate.Questions.Add(questionId);
@@ -203,19 +213,36 @@ public class SessionController : ControllerBase
     }
 
     [Authorize("teacher")]
-    [Route("change/questions/{sessionId}")]
+    [Route("questions/add/{sessionId}")]
     [HttpPut]
-    public IActionResult ChangeQuestions([FromQuery] List<string> questions, [FromBody] List<Question> changed,
+    public IActionResult AddQuestions(List<QuestionUpdateDto> questions,
         string sessionId)
     {
-        return StatusCode(501);
+        
+        var fullQuestions = _mapper.Map<IEnumerable<Question>>(questions);
+        try
+        {
+            _questionsCaching.AddQuestions(fullQuestions.ToList(), sessionId);
+        }
+        catch (NotFoundException e)
+        {
+            return BadRequest(new ErrorResponse
+            {
+                Error = "Сессия не найдена",
+                Message = e.Message
+            });
+        }
+
+        Session? session = _sessionManager.GetSession(sessionId);
+        _sessionManager.AddQuestions(fullQuestions.ToList(), session);
+
+        return Ok();
     }
 
     /// <summary>
     ///     Возвращает сессию по её id
     /// </summary>
-    /// <param name="shortId"></param>
-    /// <returns></returns>
+    /// <param name="shortId">Код Id сессии</param>
     [Authorize("teacher")]
     [Route("get/{shortId}")]
     [HttpGet]
@@ -244,12 +271,12 @@ public class SessionController : ControllerBase
     /// <summary>
     /// Возвращает все вопросы сессии
     /// </summary>
-    /// <param name="sessionId">Id сессии</param>
-    [Route("get/questions/{sessionId}")]
+    /// <param name="shortId">Код Id сессии</param>
+    [Route("get/questions/{shortId}")]
     [HttpGet]
-    public IActionResult GetQuestions(string sessionId)
+    public IActionResult GetQuestions(string shortId)
     {
-        Session? session = _sessionManager.GetSession(sessionId);
+        Session? session = _sessionManager.GetSession(shortId);
         if (session == null)
             return BadRequest(new ErrorResponse
             {
@@ -259,7 +286,7 @@ public class SessionController : ControllerBase
 
         try
         {
-            var questions = _questionsCaching.GetQuestionsFromSession(sessionId);
+            var questions = _questionsCaching.GetQuestionsFromSession(shortId);
 
             return Ok(questions);
         }
@@ -271,6 +298,24 @@ public class SessionController : ControllerBase
                 Message = e.Message
             });
         }
+    }
+
+    /// <summary>
+    /// Возвращает историю прохождения сессий студентом
+    /// </summary>
+    [Authorize("student")]
+    [Route("get/history/{shortId}")]
+    [HttpGet]
+    public async Task<IActionResult> GetHistorySessions(string shortId)
+    {
+        User student = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
+        
+        var sessions = _sessionDataContext.Sessions
+            .Where(session => session.Students.Contains(student.Id));
+        
+        var result = _mapper.Map<ICollection<SessionStudentDto>>(sessions);
+        
+        return Ok(result);
     }
 
 #if DEBUG

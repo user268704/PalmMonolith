@@ -76,7 +76,7 @@ public class SessionManager : ISessionManager
         if (updates.Questions != null) oldSession.Questions.AddRange(updates.Questions.Except(oldSession.Questions));
         if (updates.GroupInfo != null) oldSession.GroupInfo = updates.GroupInfo;
         if (updates.Takes != null)
-            oldSession.Takes.AddRange(updates.Takes.Except(oldSession.Takes, new TakeComparer()));
+            oldSession.Takes.AddRange(updates.Takes.Except(oldSession.Takes, new TakeComparer())); 
         if (updates.Students != null) oldSession.Students.AddRange(updates?.Students.Except(oldSession.Students));
         if (!string.IsNullOrEmpty(updates.Title)) oldSession.Title = updates.Title;
 
@@ -96,6 +96,43 @@ public class SessionManager : ISessionManager
     public List<Session> GetAllSessions()
     {
         return _sessionCaching.GetAllSessions();
+    }
+
+    public bool ReplyToQuestion(Session session, User user, string questionId, string answerId)
+    {
+        Take userTake = session.Takes.Find(take => take.StudentId == user.Id);
+
+        if (userTake.QuestionAnswers == null) 
+            userTake.QuestionAnswers = new();
+
+        bool isCorrect = false;
+        if (userTake.QuestionAnswers.Any(answer => answer.QuestionId == questionId))
+        {
+            if (!session.IsAllowedChangedAnswers)
+                throw new ArgumentException("В этой сессии нельзя менять ответы");
+            
+            userTake.QuestionAnswers.RemoveAll(answer => answer.QuestionId == questionId);
+            userTake.QuestionAnswers.Add(new QuestionAnswer
+            {
+                QuestionId = questionId,
+                AnswerId = Convert.ToInt32(answerId)
+            });
+        }
+        else
+        {
+            Question question = _questionsCache.GetQuestion(session.ShortId, questionId);
+            isCorrect = question.Answers.First(answer => answer.Id == Convert.ToInt32(answerId)).IsCorrect;
+
+            userTake.QuestionAnswers.Add(new QuestionAnswer
+            {
+                QuestionId = questionId,
+                AnswerId = Convert.ToInt32(answerId),
+                IsCorrect = isCorrect
+            });   
+        }
+
+        UpdateSession(session);
+        return isCorrect;
     }
 
     public void RemoveSession(string shortId)

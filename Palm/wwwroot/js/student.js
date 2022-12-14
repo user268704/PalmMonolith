@@ -1,6 +1,33 @@
 ﻿"use strict";
 
-var connection = new signalR.HubConnectionBuilder().withUrl("/api/signalr/session").build();
+var connection = new signalR.HubConnectionBuilder()
+    .withUrl("/api/signalr/session")
+    .configureLogging(signalR.LogLevel.Information)
+    .build();
+
+let sendButton = document.getElementById("sendResponse");
+sendButton.disabled = true
+const urlPath = window.location.pathname;
+let sessionId = urlPath.substring(urlPath.lastIndexOf("/") + 1);
+
+sendButton.addEventListener("click", function (event) {
+    
+    let questionID = document.getElementById("questionId").value;
+    let answerID = document.getElementById("answerId").value;
+    
+    let response = {
+        sessionId: sessionId,
+        questionId: questionID,
+        answerId: answerID
+    }
+    
+    connection.invoke("Reply", sessionId, questionID, answerID).catch(function (err) {
+        return console.error(err.toString());
+    });
+    
+    event.preventDefault();
+    
+})
 
 // Создание метода который будет вызываться с сервера
 connection.on("StartSession", function (questions) {
@@ -34,10 +61,8 @@ connection.start().then(function () {
     const listItem = document.createElement("li");
     list.appendChild(listItem);
     listItem.textContent = "Connection started";
-
-    const urlPath = window.location.pathname;
-    let sessionId = urlPath.substring(urlPath.lastIndexOf("/") + 1);
-
+    
+    sendButton.disabled = false;
     connection.invoke("JoinSession", sessionId)
         .catch(function (err) {
             return console.error(err.toString());
